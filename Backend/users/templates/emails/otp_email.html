@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Reset Your Password - Smart Dispenser</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --primary: #2563eb;
+        --primary-dark: #1d4ed8;
+        --primary-light: #dbeafe;
+        --secondary: #7c3aed;
+        --background: #f8fafc;
+        --surface: #ffffff;
+        --text-primary: #111827;
+        --text-secondary: #6b7280;
+        --text-muted: #9ca3af;
+        --otp-bg: #dbeafe;
+        --otp-color: #1e40af;
+        --shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
+          0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        --border-radius: 20px;
+        --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      body {
+        margin: 0;
+        background: linear-gradient(
+          135deg,
+          var(--primary-light) 0%,
+          var(--background) 50%,
+          #f1f5f9 100%
+        );
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+          Roboto, sans-serif;
+        padding: 40px 20px;
+        line-height: 1.6;
+      }
+
+      .container {
+        max-width: 650px;
+        margin: auto;
+        background: var(--surface);
+        border-radius: var(--border-radius);
+        overflow: hidden;
+        box-shadow: var(--shadow);
+        border: 1px solid #e5e7eb;
+      }
+
+      .header {
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        padding: 3rem 2rem;
+        text-align: center;
+        color: white;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .header::before {
+        content: "";
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(
+          circle,
+          rgba(255, 255, 255, 0.1) 1px,
+          transparent 1px
+        );
+        background-size: 20px 20px;
+        animation: float 20s linear infinite;
+      }
+
+      .header-icon {
+        width: 80px;
+        height: 80px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 1.5rem;
+        font-size: 2rem;
+        backdrop-filter: blur(10px);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        position: relative;
+        z-index: 1;
+      }
+
+      .header h1 {
+        font-size: 2rem;
+        font-weight: 800;
+        margin: 0;
+        position: relative;
+        z-index: 1;
+        letter-spacing: -0.025em;
+      }
+
+      .content {
+        padding: 3rem 2.5rem;
+      }
+
+      .greeting {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 1.5rem;
+      }
+
+      .message {
+        color: var(--text-secondary);
+        font-size: 1.1rem;
+        margin-bottom: 2.5rem;
+        line-height: 1.7;
+      }
+
+      .otp-section {
+        text-align: center;
+        margin: 3rem 0;
+        padding: 2rem;
+        background: linear-gradient(135deg, var(--primary-light), #f0f9ff);
+        border-radius: 16px;
+        border: 2px solid var(--primary);
+      }
+
+      .otp-label {
+        font-size: 1rem;
+        color: var(--text-secondary);
+        margin-bottom: 1.5rem;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        font-weight: 700;
+      }
+
+      .otp-box {
+        background: var(--surface);
+        padding: 2rem;
+        border-radius: 16px;
+        font-size: 3rem;
+        font-weight: 900;
+        letter-spacing: 12px;
+        color: var(--otp-color);
+        border: 3px solid var(--primary);
+        display: inline-block;
+        min-width: 350px;
+        box-shadow: 0 8px 25px rgba(37, 99, 235, 0.2);
+        font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
+      }
+      .warning {
+        background: linear-gradient(
+          135deg,
+          rgba(217, 119, 6, 0.1),
+          rgba(245, 158, 11, 0.05)
+        );
+        border: 2px solid rgba(217, 119, 6, 0.3);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin: 2rem 0;
+        color: #92400e;
+        font-size: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        font-weight: 600;
+      }
+
+      .warning-icon {
+        font-size: 1.5rem;
+        color: #d97706;
+      }
+
+      .footer {
+        background: linear-gradient(135deg, var(--background), #f1f5f9);
+        padding: 2.5rem;
+        border-top: 1px solid #e5e7eb;
+      }
+
+      .signature {
+        color: var(--text-secondary);
+        margin-bottom: 2rem;
+        font-size: 1.1rem;
+        line-height: 1.6;
+      }
+
+      .company-name {
+        font-weight: 700;
+        color: var(--text-primary);
+        font-size: 1.2rem;
+      }
+
+      .footer-note {
+        color: var(--text-muted);
+        font-size: 0.9rem;
+        text-align: center;
+        padding-top: 1.5rem;
+        border-top: 1px solid #e5e7eb;
+        line-height: 1.6;
+      }
+
+      .security-tips {
+        background: linear-gradient(
+          135deg,
+          rgba(5, 150, 105, 0.1),
+          rgba(16, 185, 129, 0.05)
+        );
+        border: 2px solid rgba(5, 150, 105, 0.3);
+        border-radius: 12px;
+        padding: 2rem;
+        margin: 2rem 0;
+      }
+
+      .security-tips h3 {
+        color: #059669;
+        font-size: 1.1rem;
+        margin-bottom: 1rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .security-tips ul {
+        color: #047857;
+        font-size: 1rem;
+        margin: 0;
+        padding-left: 1.5rem;
+        line-height: 1.6;
+      }
+
+      .security-tips li {
+        margin-bottom: 0.5rem;
+      }
+
+      @keyframes float {
+        0% {
+          transform: translateY(0px) rotate(0deg);
+        }
+        50% {
+          transform: translateY(-10px) rotate(180deg);
+        }
+        100% {
+          transform: translateY(0px) rotate(360deg);
+        }
+      }
+      @media (max-width: 600px) {
+        .container {
+          margin: 0;
+          border-radius: 0;
+        }
+
+        .content {
+          padding: 2rem 1.5rem;
+        }
+
+        .header {
+          padding: 2rem 1.5rem;
+        }
+
+        .otp-box {
+          font-size: 2.5rem;
+          letter-spacing: 8px;
+          min-width: 280px;
+          padding: 1.5rem;
+        }
+
+        .footer {
+          padding: 2rem 1.5rem;
+        }
+
+        .greeting {
+          font-size: 1.3rem;
+        }
+
+        .header h1 {
+          font-size: 1.75rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <div class="header-icon">🔐</div>
+        <h1>Password Reset</h1>
+      </div>
+
+      <div class="content">
+        <div class="greeting">Hi {{ user.username }},</div>
+
+        <div class="message">
+          We received a request to reset your Smart Dispenser password. Use the
+          verification code below to proceed with resetting your password.
+        </div>
+
+        <div class="otp-section">
+          <div class="otp-label">Your Verification Code</div>
+          <div class="otp-box">{{ otp }}</div>
+        </div>
+
+        <div class="warning">
+          <span class="warning-icon">⏰</span>
+          <div>
+            <strong>Important:</strong> This code expires in
+            <strong>10 minutes</strong> for your security.
+          </div>
+        </div>
+
+        <div class="security-tips">
+          <h3>🛡️ Security Tips</h3>
+          <ul>
+            <li>Never share this code with anyone</li>
+            <li>
+              Smart Dispenser will never ask for this code via phone or email
+            </li>
+            <li>If you didn't request this reset, please ignore this email</li>
+          </ul>
+        </div>
+
+        <div class="message">
+          If you're having trouble resetting your password, please contact our
+          support team for assistance.
+        </div>
+      </div>
+
+      <div class="footer">
+        <div class="signature">
+          Best regards,<br />
+          <span class="company-name">Smart Dispenser Team</span>
+        </div>
+
+        <div class="footer-note">
+          This is an automated security message. Please do not reply to this
+          email.<br />
+          © 2025 Smart Dispenser. All rights reserved.
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

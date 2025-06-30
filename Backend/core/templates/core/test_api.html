@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Test Contact API</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+      }
+      .test-container {
+        max-width: 600px;
+        margin: 0 auto;
+      }
+      button {
+        padding: 10px 20px;
+        margin: 10px 0;
+        cursor: pointer;
+      }
+      .result {
+        margin-top: 20px;
+        padding: 10px;
+        border-radius: 5px;
+      }
+      .success {
+        background-color: #d4edda;
+        color: #155724;
+      }
+      .error {
+        background-color: #f8d7da;
+        color: #721c24;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="test-container">
+      <h1>Contact API Test</h1>
+      <button onclick="testContactAPI()">Test Contact API</button>
+      <div id="result"></div>
+    </div>
+
+    <script>
+      async function testContactAPI() {
+        const resultDiv = document.getElementById("result");
+        resultDiv.innerHTML = "Testing...";
+
+        try {
+          const response = await fetch("/api/contact/", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRFToken": getCookie("csrftoken"),
+            },
+            body: JSON.stringify({
+              name: "Test User",
+              email: "test@example.com",
+              phone: "+1234567890",
+              subject: "technical_support",
+              message: "This is a test message from the web API test",
+            }),
+          });
+
+          const data = await response.json();
+
+          if (response.ok && data.success) {
+            resultDiv.innerHTML = `<div class="result success">
+                        <strong>Success!</strong><br>
+                        ${data.message}
+                    </div>`;
+          } else {
+            resultDiv.innerHTML = `<div class="result error">
+                        <strong>Error:</strong><br>
+                        ${data.error || "Unknown error"}
+                    </div>`;
+          }
+        } catch (error) {
+          resultDiv.innerHTML = `<div class="result error">
+                    <strong>Network Error:</strong><br>
+                    ${error.message}
+                </div>`;
+        }
+      }
+
+      function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== "") {
+          const cookies = document.cookie.split(";");
+          for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === name + "=") {
+              cookieValue = decodeURIComponent(
+                cookie.substring(name.length + 1)
+              );
+              break;
+            }
+          }
+        }
+        return cookieValue;
+      }
+    </script>
+  </body>
+</html>
