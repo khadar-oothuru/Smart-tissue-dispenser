@@ -12,7 +12,6 @@ import io
 import logging
 import json
 
-
 from django.db import models
 from device.models import Device, DeviceData
 
@@ -37,19 +36,30 @@ def device_analytics(request):
         empty_alerts = device_data.filter(alert="EMPTY").count()
         full_alerts = device_data.filter(alert="FULL").count()
         
-        # Battery alerts - Fixed logic to match data_views.py
+        # Battery alerts - Updated logic: 0% = battery off, 1-10% = critical, 11-20% = low
         battery_low_count = device_data.filter(
             battery_percentage__gt=10, 
             battery_percentage__lte=20
         ).exclude(battery_percentage=None).count()
         
         battery_critical_count = device_data.filter(
+            battery_percentage__gt=0,  # Exclude 0% (that's battery off)
             battery_percentage__lte=10
         ).exclude(battery_percentage=None).count()
         
-        # Power status alerts
+        # Power status alerts - Check for power_status "OFF" and pwr_sts "no"
         power_off_count = device_data.filter(
-            power_status__iexact="OFF"
+            Q(power_status__iexact="OFF") | Q(power_status__iexact="no")
+        ).count()
+        
+        # No power devices specifically (pwr_sts = "no")
+        no_power_count = device_data.filter(
+            power_status__iexact="no"
+        ).count()
+        
+        # Battery off devices (only battery_percentage = 0, not null)
+        battery_off_count = device_data.filter(
+            battery_percentage=0
         ).count()
         
         # Battery statistics - Fixed calculations
@@ -72,6 +82,8 @@ def device_analytics(request):
             "battery_critical_count": battery_critical_count,
             "battery_alert_count": battery_low_count + battery_critical_count,  # Total battery alerts
             "power_off_count": power_off_count,
+            "no_power_count": no_power_count,  # New field for no power devices (pwr_sts = "no")
+            "battery_off_count": battery_off_count,  # New field for battery off devices (battery_percentage = 0)
             "avg_battery": round(avg_battery, 2) if avg_battery else None,
             "min_battery": round(min_battery, 2) if min_battery else None,
             "max_battery": round(max_battery, 2) if max_battery else None,
@@ -99,13 +111,14 @@ def advanced_analytics(request):
         full_alerts = device_data.filter(alert="FULL").count()
         tamper_count = device_data.filter(tamper="true").count()
         
-        # Battery alerts - Fixed logic to match data_views.py
+        # Battery alerts - Updated logic: 0% = battery off, 1-10% = critical, 11-20% = low
         battery_low_count = device_data.filter(
             battery_percentage__gt=10, 
             battery_percentage__lte=20
         ).exclude(battery_percentage=None).count()
         
         battery_critical_count = device_data.filter(
+            battery_percentage__gt=0,  # Exclude 0% (that's battery off)
             battery_percentage__lte=10
         ).exclude(battery_percentage=None).count()
         
@@ -166,16 +179,25 @@ def device_realtime_status(request):
         # Enhanced power off detection logic
         def is_power_off_status(val):
             if val is None:
-                return True
+                return False  # Changed: null doesn't mean power off
             val_str = str(val).strip().lower()
-            return val_str in ['off', 'no', 'none', '', '0', 'false']
+            return val_str in ['off', 'no', 'none', '0', 'false']
+        
+        def is_no_power_status(val):
+            if val is None:
+                return False
+            val_str = str(val).strip().lower()
+            return val_str == 'no'  # Specifically check for "no" power status
 
-        # Battery alert logic - Fixed to match data_views.py thresholds
+        # Battery alert logic - Updated: 0% = battery off, 1-10% = critical, 11-20% = low
         battery_critical = 0
         battery_low = 0
+        battery_off = 0
         if latest_data and latest_data.battery_percentage is not None:
-            if latest_data.battery_percentage <= 10:
-                battery_critical = 1
+            if latest_data.battery_percentage == 0:
+                battery_off = 1  # Exactly 0% is battery off
+            elif 0 < latest_data.battery_percentage <= 10:
+                battery_critical = 1  # 1-10% is critical
             elif 10 < latest_data.battery_percentage <= 20:
                 battery_low = 1
 
@@ -187,24 +209,30 @@ def device_realtime_status(request):
             status_priority = 0
             
             # Enhanced status priority logic:
-            # Priority: Tamper > Empty > Low > Full > Battery Critical > Battery Low > Power Off > Normal > Offline
+            # Priority: Tamper > Empty > Low > Full > Battery Critical > Battery Low > No Power > Battery Off > Power Off > Normal > Offline
             if latest_data.tamper == "true":
                 current_status = "tamper"
-                status_priority = 8
+                status_priority = 10
             elif latest_data.alert == "EMPTY":
                 current_status = "empty"
-                status_priority = 7
+                status_priority = 9
             elif latest_data.alert == "LOW":
                 current_status = "low"
-                status_priority = 6
+                status_priority = 8
             elif latest_data.alert == "FULL":
                 current_status = "full"
-                status_priority = 5
+                status_priority = 7
             elif battery_critical:
                 current_status = "battery_critical"
-                status_priority = 4
+                status_priority = 6
             elif battery_low:
                 current_status = "battery_low"
+                status_priority = 5
+            elif is_no_power_status(latest_data.power_status):
+                current_status = "no_power"
+                status_priority = 4
+            elif battery_off:
+                current_status = "battery_off"
                 status_priority = 3
             elif is_power_off_status(latest_data.power_status):
                 current_status = "power_off"
@@ -235,6 +263,8 @@ def device_realtime_status(request):
                 "battery_percentage": latest_data.battery_percentage,
                 "battery_critical": battery_critical,
                 "battery_low": battery_low,
+                "battery_off": battery_off,  # Battery percentage = 0
+                "no_power": is_no_power_status(latest_data.power_status) if latest_data else 0,  # pwr_sts = "no"
                 "power_status": latest_data.power_status,
                 "device_timestamp": latest_data.device_timestamp
             })
@@ -258,6 +288,8 @@ def device_realtime_status(request):
                 "battery_percentage": None,
                 "battery_critical": 0,
                 "battery_low": 0,
+                "battery_off": 0,  # No data doesn't mean battery off
+                "no_power": 0,  # No data doesn't mean no power
                 "power_status": None,
                 "device_timestamp": None
             })
@@ -316,9 +348,11 @@ def device_status_summary(request):
     full_count = sum(1 for d in device_statuses if d['alert'] == 'FULL')
     battery_critical_count = sum(1 for d in device_statuses if d['battery_percentage'] is not None and d['battery_percentage'] <= 10)
     battery_low_count = sum(1 for d in device_statuses if d['battery_percentage'] is not None and 10 < d['battery_percentage'] <= 20)
-    battery_alert_count = battery_critical_count + battery_low_count
+    battery_off_count = sum(1 for d in device_statuses if d['battery_percentage'] is not None and d['battery_percentage'] == 0)  # Only exactly 0
+    no_power_count = sum(1 for d in device_statuses if d['power_status'] is not None and str(d['power_status']).lower() == 'no')  # Only pwr_sts = "no"
+    battery_alert_count = battery_critical_count + battery_low_count + battery_off_count
     power_off_count = sum(1 for d in device_statuses if (d['power_status'] or '').upper() == 'OFF')
-    normal_count = sum(1 for d in device_statuses if d['is_active'] and not d['tamper'] and d['alert'] not in ['EMPTY', 'LOW', 'FULL'] and (d['battery_percentage'] is None or d['battery_percentage'] > 20) and (d['power_status'] is None or (d['power_status'] or '').upper() != 'OFF'))
+    normal_count = sum(1 for d in device_statuses if d['is_active'] and not d['tamper'] and d['alert'] not in ['EMPTY', 'LOW', 'FULL'] and (d['battery_percentage'] is None or d['battery_percentage'] > 20) and (d['power_status'] is None or (d['power_status'] or '').upper() not in ['OFF', 'NO']))
     inactive_count = sum(1 for d in device_statuses if not d['is_active'])
 
     return Response({
@@ -332,6 +366,8 @@ def device_status_summary(request):
             'full_devices': full_count,
             'battery_critical_devices': battery_critical_count,
             'battery_low_devices': battery_low_count,
+            'battery_off_devices': battery_off_count,  # Battery percentage = 0
+            'no_power_devices': no_power_count,  # pwr_sts = "no"
             'battery_alert_devices': battery_alert_count,
             'power_off_devices': power_off_count,
             'normal_devices': normal_count
@@ -343,6 +379,8 @@ def device_status_summary(request):
             'full': full_count,
             'battery_critical': battery_critical_count,
             'battery_low': battery_low_count,
+            'battery_off': battery_off_count,  # Battery percentage = 0
+            'no_power': no_power_count,  # pwr_sts = "no"
             'battery_alert': battery_alert_count,
             'power_off': power_off_count,
             'normal': normal_count,
@@ -354,6 +392,8 @@ def device_status_summary(request):
             'empty_percentage': round((empty_count / total_devices * 100), 1) if total_devices > 0 else 0,
             'battery_critical_percentage': round((battery_critical_count / total_devices * 100), 1) if total_devices > 0 else 0,
             'battery_low_percentage': round((battery_low_count / total_devices * 100), 1) if total_devices > 0 else 0,
+            'battery_off_percentage': round((battery_off_count / total_devices * 100), 1) if total_devices > 0 else 0,
+            'no_power_percentage': round((no_power_count / total_devices * 100), 1) if total_devices > 0 else 0,
             'battery_alert_percentage': round((battery_alert_count / total_devices * 100), 1) if total_devices > 0 else 0,
             'power_off_percentage': round((power_off_count / total_devices * 100), 1) if total_devices > 0 else 0,
             'inactive_percentage': round((inactive_count / total_devices * 100), 1) if total_devices > 0 else 0
@@ -519,7 +559,16 @@ def get_time_based_analytics_data(period, device_id=None, start_date=None, end_d
                     'full_alerts': 0,
                     'battery_percentages': [],
                     'total_usages': [],
-                    'counts': []
+                    'counts': [],
+                    'battery_low_alerts': 0,
+                    'battery_critical_alerts': 0,
+                    'battery_off_alerts': 0,
+                    'power_off_alerts': 0,
+                    'no_power_alerts': 0,
+                    'battery_alert_timestamps': [],
+                    'tissue_alert_timestamps': [],
+                    'tamper_alert_timestamps': [],
+                    'power_alert_timestamps': []
                 }
             
             period_data[period_key]['total_entries'] += 1
@@ -527,13 +576,79 @@ def get_time_based_analytics_data(period, device_id=None, start_date=None, end_d
             # Count alert types based on new system
             if data_point.alert == 'EMPTY':
                 period_data[period_key]['empty_alerts'] += 1
+                period_data[period_key]['tissue_alert_timestamps'].append({
+                    'type': 'EMPTY',
+                    'timestamp': data_point.timestamp.isoformat(),
+                    'device_timestamp': data_point.device_timestamp
+                })
             elif data_point.alert == 'LOW':
                 period_data[period_key]['low_alerts'] += 1
+                period_data[period_key]['tissue_alert_timestamps'].append({
+                    'type': 'LOW',
+                    'timestamp': data_point.timestamp.isoformat(),
+                    'device_timestamp': data_point.device_timestamp
+                })
             elif data_point.alert == 'FULL':
                 period_data[period_key]['full_alerts'] += 1
+                period_data[period_key]['tissue_alert_timestamps'].append({
+                    'type': 'FULL',
+                    'timestamp': data_point.timestamp.isoformat(),
+                    'device_timestamp': data_point.device_timestamp
+                })
                 
             if data_point.tamper == "true":
                 period_data[period_key]['tamper_alerts'] += 1
+                period_data[period_key]['tamper_alert_timestamps'].append({
+                    'timestamp': data_point.timestamp.isoformat(),
+                    'device_timestamp': data_point.device_timestamp
+                })
+            
+            # Count battery alerts with timestamps
+            if data_point.battery_percentage is not None:
+                if data_point.battery_percentage == 0:
+                    period_data[period_key]['battery_off_alerts'] += 1
+                    period_data[period_key]['battery_alert_timestamps'].append({
+                        'type': 'BATTERY_OFF',
+                        'percentage': data_point.battery_percentage,
+                        'timestamp': data_point.timestamp.isoformat(),
+                        'device_timestamp': data_point.device_timestamp
+                    })
+                elif 0 < data_point.battery_percentage <= 10:
+                    period_data[period_key]['battery_critical_alerts'] += 1
+                    period_data[period_key]['battery_alert_timestamps'].append({
+                        'type': 'BATTERY_CRITICAL',
+                        'percentage': data_point.battery_percentage,
+                        'timestamp': data_point.timestamp.isoformat(),
+                        'device_timestamp': data_point.device_timestamp
+                    })
+                elif 10 < data_point.battery_percentage <= 20:
+                    period_data[period_key]['battery_low_alerts'] += 1
+                    period_data[period_key]['battery_alert_timestamps'].append({
+                        'type': 'BATTERY_LOW',
+                        'percentage': data_point.battery_percentage,
+                        'timestamp': data_point.timestamp.isoformat(),
+                        'device_timestamp': data_point.device_timestamp
+                    })
+            
+            # Count power off alerts with timestamps
+            if data_point.power_status:
+                power_status_lower = data_point.power_status.lower()
+                if power_status_lower in ['off', 'none', '0', 'false']:
+                    period_data[period_key]['power_off_alerts'] += 1
+                    period_data[period_key]['power_alert_timestamps'].append({
+                        'type': 'POWER_OFF',
+                        'status': data_point.power_status,
+                        'timestamp': data_point.timestamp.isoformat(),
+                        'device_timestamp': data_point.device_timestamp
+                    })
+                elif power_status_lower == 'no':
+                    period_data[period_key]['no_power_alerts'] += 1
+                    period_data[period_key]['power_alert_timestamps'].append({
+                        'type': 'NO_POWER',
+                        'status': data_point.power_status,
+                        'timestamp': data_point.timestamp.isoformat(),
+                        'device_timestamp': data_point.device_timestamp
+                    })
             
             # Collect new field data
             if data_point.battery_percentage is not None:
@@ -564,12 +679,23 @@ def get_time_based_analytics_data(period, device_id=None, start_date=None, end_d
                 'empty_alerts': data['empty_alerts'],
                 'low_alerts': data['low_alerts'],
                 'full_alerts': data['full_alerts'],
-                'tamper_alerts': data['tamper_alerts'],
+                'battery_low_alerts': data['battery_low_alerts'],
+                'battery_critical_alerts': data['battery_critical_alerts'],
+                'battery_off_alerts': data['battery_off_alerts'],
+                'power_off_alerts': data['power_off_alerts'],
+                'no_power_alerts': data['no_power_alerts'],
+                'total_battery_alerts': data['battery_low_alerts'] + data['battery_critical_alerts'] + data['battery_off_alerts'],
+                'total_tissue_alerts': data['empty_alerts'] + data['low_alerts'] + data['full_alerts'],
+                'total_power_alerts': data['power_off_alerts'] + data['no_power_alerts'],
                 'avg_battery_percentage': battery_avg,
                 'avg_total_usage': usage_avg,
                 'avg_count': count_avg,
                 'battery_readings_count': len(data['battery_percentages']),
-                'usage_readings_count': len(data['total_usages'])
+                'usage_readings_count': len(data['total_usages']),
+                'battery_alert_timestamps': data['battery_alert_timestamps'],
+                'tissue_alert_timestamps': data['tissue_alert_timestamps'],
+                'tamper_alert_timestamps': data['tamper_alert_timestamps'],
+                'power_alert_timestamps': data['power_alert_timestamps']
             }
             periods.append(period_entry)
         
@@ -700,17 +826,20 @@ def download_pdf_analytics(request):
 
 
 def generate_reportlab_pdf(analytics_data, filename, period):
-    """Generate PDF using ReportLab"""
+    """Generate PDF using ReportLab with pie charts"""
     from reportlab.lib.pagesizes import A4
     from reportlab.lib import colors
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-    from reportlab.lib.enums import TA_CENTER
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image, PageBreak
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT
     import io
+    import matplotlib.pyplot as plt
+    import matplotlib
+    matplotlib.use('Agg')  # Use non-interactive backend
     
     # Create PDF buffer
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4)
+    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=50, bottomMargin=50)
     
     # Get styles
     styles = getSampleStyleSheet()
@@ -722,16 +851,26 @@ def generate_reportlab_pdf(analytics_data, filename, period):
         alignment=TA_CENTER
     )
     
+    subtitle_style = ParagraphStyle(
+        'CustomSubtitle',
+        parent=styles['Heading2'],
+        fontSize=14,
+        spaceAfter=15,
+        alignment=TA_LEFT
+    )
+    
     # Build content
     story = []
-      # Title and metadata
+    
+    # Title and metadata
     story.append(Paragraph(f"Device Analytics Report - {period.title()}", title_style))
     story.append(Spacer(1, 12))
     
     total_devices = len(analytics_data.get('data', []))
     total_periods = sum(len(d.get('periods', [])) for d in analytics_data.get('data', []))
     
-    report_info = f"""    Generated: {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}
+    report_info = f"""
+    Generated: {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}
     Period: {period.title()}
     Total Devices: {total_devices}
     Data Points: {total_periods}
@@ -746,8 +885,50 @@ def generate_reportlab_pdf(analytics_data, filename, period):
         story.append(Paragraph(f"⚠️ No data available for the {period} period.", styles['Heading2']))
         story.append(Paragraph("Try selecting a different time period or check if devices are sending data.", styles['Normal']))
     else:
-        # Process each device
+        # Create summary pie charts
+        story.append(Paragraph("📊 Alert Distribution Summary", subtitle_style))
+        
+        # Calculate overall statistics
+        total_battery_alerts = 0
+        total_tissue_alerts = 0
+        total_tamper_alerts = 0
+        total_power_alerts = 0
+        battery_critical = 0
+        battery_low = 0
+        battery_off = 0
+        empty_alerts = 0
+        low_alerts = 0
+        full_alerts = 0
+        
         for device in analytics_data.get('data', []):
+            for period_data in device.get('periods', []):
+                total_battery_alerts += period_data.get('total_battery_alerts', 0)
+                total_tissue_alerts += period_data.get('total_tissue_alerts', 0)
+                total_tamper_alerts += period_data.get('tamper_alerts', 0)
+                total_power_alerts += period_data.get('total_power_alerts', 0)
+                battery_critical += period_data.get('battery_critical_alerts', 0)
+                battery_low += period_data.get('battery_low_alerts', 0)
+                battery_off += period_data.get('battery_off_alerts', 0)
+                empty_alerts += period_data.get('empty_alerts', 0)
+                low_alerts += period_data.get('low_alerts', 0)
+                full_alerts += period_data.get('full_alerts', 0)
+        
+        # Create pie charts
+        pie_charts = create_summary_pie_charts(
+            total_battery_alerts, total_tissue_alerts, total_tamper_alerts, total_power_alerts,
+            battery_critical, battery_low, battery_off, empty_alerts, low_alerts, full_alerts
+        )
+        
+        # Add pie charts to story
+        for chart_image in pie_charts:
+            if chart_image:
+                story.append(chart_image)
+                story.append(Spacer(1, 15))
+        
+        story.append(PageBreak())
+        
+        # Process each device
+        for device_idx, device in enumerate(analytics_data.get('data', [])):
             device_name = device.get('device_name', f"Device {device.get('device_id', 'Unknown')}")
             room = device.get('room', 'N/A')
             floor = device.get('floor', 'N/A')
@@ -761,55 +942,94 @@ def generate_reportlab_pdf(analytics_data, filename, period):
                 story.append(Paragraph("No data available for this time period.", styles['Normal']))
                 story.append(Spacer(1, 12))
                 continue
-              # Create table
-            table_data = [['Period', 'Entries', 'Tamper', 'Empty', 'Low', 'Full', 'Battery(%)', 'Usage']]
-        
-        for period_data in periods:
-            # Handle battery percentage - ensure it's properly formatted
-            battery_percentage = period_data.get('avg_battery_percentage')
-            if battery_percentage is not None and battery_percentage != '' and battery_percentage != 'N/A':
-                try:
-                    battery_str = f"{float(battery_percentage):.1f}%"
-                except (ValueError, TypeError):
+            
+            # Enhanced table with battery alerts
+            table_data = [['Period', 'Entries', 'Tissue Alerts', 'Battery Alerts', 'Tamper', 'Power Issues', 'Battery(%)', 'Usage']]
+            
+            for period_data in periods:
+                # Handle battery percentage
+                battery_percentage = period_data.get('avg_battery_percentage')
+                if battery_percentage is not None and battery_percentage != '' and battery_percentage != 'N/A':
+                    try:
+                        battery_str = f"{float(battery_percentage):.1f}%"
+                    except (ValueError, TypeError):
+                        battery_str = 'N/A'
+                else:
                     battery_str = 'N/A'
-            else:
-                battery_str = 'N/A'
-            
-            # Handle total usage
-            total_usage = period_data.get('avg_total_usage')
-            if total_usage is not None and total_usage != '' and total_usage != 'N/A':
-                try:
-                    usage_str = f"{int(float(total_usage))}"
-                except (ValueError, TypeError):
+                
+                # Handle total usage
+                total_usage = period_data.get('avg_total_usage')
+                if total_usage is not None and total_usage != '' and total_usage != 'N/A':
+                    try:
+                        usage_str = f"{int(float(total_usage))}"
+                    except (ValueError, TypeError):
+                        usage_str = 'N/A'
+                else:
                     usage_str = 'N/A'
-            else:                usage_str = 'N/A'
+                
+                # Calculate alert summaries
+                tissue_alerts = period_data.get('total_tissue_alerts', 0)
+                battery_alerts = period_data.get('total_battery_alerts', 0)
+                power_alerts = period_data.get('total_power_alerts', 0)
+                
+                table_data.append([
+                    period_data.get('period_name', period_data.get('period', 'Unknown')),
+                    str(period_data.get('total_entries', 0)),
+                    f"E:{period_data.get('empty_alerts', 0)} L:{period_data.get('low_alerts', 0)} F:{period_data.get('full_alerts', 0)}",
+                    f"C:{period_data.get('battery_critical_alerts', 0)} L:{period_data.get('battery_low_alerts', 0)} O:{period_data.get('battery_off_alerts', 0)}",
+                    str(period_data.get('tamper_alerts', 0)),
+                    f"Off:{period_data.get('power_off_alerts', 0)} No:{period_data.get('no_power_alerts', 0)}",
+                    battery_str,
+                    usage_str
+                ])
             
-            table_data.append([
-                period_data.get('period_name', period_data.get('period', 'Unknown')),
-                str(period_data.get('total_entries', 0)),
-                str(period_data.get('tamper_alerts', 0)),
-                str(period_data.get('empty_alerts', 0)),
-                str(period_data.get('low_alerts', 0)),
-                str(period_data.get('full_alerts', 0)),
-                battery_str,
-                usage_str
-            ])
-        
-        table = Table(table_data, colWidths=[60, 40, 40, 40, 40, 40, 50, 40])
-        table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 8),
-            ('FONTSIZE', (0, 1), (-1, -1), 7),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ]))
-        
-        story.append(table)
-        story.append(Spacer(1, 15))
+            table = Table(table_data, colWidths=[50, 35, 55, 55, 35, 45, 40, 35])
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 7),
+                ('FONTSIZE', (0, 1), (-1, -1), 6),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ]))
+            
+            story.append(table)
+            story.append(Spacer(1, 10))
+            
+            # Add battery alert timestamps if available
+            battery_alerts_found = False
+            for period_data in periods:
+                battery_timestamps = period_data.get('battery_alert_timestamps', [])
+                if battery_timestamps:
+                    battery_alerts_found = True
+                    break
+            
+            if battery_alerts_found:
+                story.append(Paragraph("🔋 Battery Alert Details:", styles['Heading3']))
+                battery_details = []
+                for period_data in periods:
+                    period_name = period_data.get('period_name', 'Unknown')
+                    battery_timestamps = period_data.get('battery_alert_timestamps', [])
+                    if battery_timestamps:
+                        for alert in battery_timestamps[:3]:  # Show only first 3 alerts per period
+                            alert_time = alert.get('timestamp', 'Unknown')
+                            alert_type = alert.get('type', 'Unknown')
+                            percentage = alert.get('percentage', 'N/A')
+                            battery_details.append(f"• {period_name}: {alert_type} ({percentage}%) at {alert_time[:19]}")
+                
+                if battery_details:
+                    for detail in battery_details[:5]:  # Limit to 5 alerts per device
+                        story.append(Paragraph(detail, styles['Normal']))
+                    story.append(Spacer(1, 10))
+            
+            # Add page break after every 2 devices
+            if (device_idx + 1) % 2 == 0 and device_idx < len(analytics_data.get('data', [])) - 1:
+                story.append(PageBreak())
+            else:
+                story.append(Spacer(1, 20))
     
     # Build PDF
     doc.build(story)
@@ -823,6 +1043,126 @@ def generate_reportlab_pdf(analytics_data, filename, period):
     response.write(pdf_content)
     
     return response
+
+
+def create_summary_pie_charts(total_battery_alerts, total_tissue_alerts, total_tamper_alerts, total_power_alerts,
+                             battery_critical, battery_low, battery_off, empty_alerts, low_alerts, full_alerts):
+    """Create pie charts for analytics summary"""
+    import matplotlib.pyplot as plt
+    from reportlab.platypus import Image
+    import io
+    
+    charts = []
+    
+    # Overall Alert Distribution Pie Chart
+    if total_battery_alerts + total_tissue_alerts + total_tamper_alerts + total_power_alerts > 0:
+        fig, ax = plt.subplots(figsize=(6, 4))
+        
+        labels = []
+        sizes = []
+        colors_list = []
+        
+        if total_battery_alerts > 0:
+            labels.append(f'Battery Alerts ({total_battery_alerts})')
+            sizes.append(total_battery_alerts)
+            colors_list.append('#ff6b6b')
+            
+        if total_tissue_alerts > 0:
+            labels.append(f'Tissue Alerts ({total_tissue_alerts})')
+            sizes.append(total_tissue_alerts)
+            colors_list.append('#4ecdc4')
+            
+        if total_tamper_alerts > 0:
+            labels.append(f'Tamper Alerts ({total_tamper_alerts})')
+            sizes.append(total_tamper_alerts)
+            colors_list.append('#45b7d1')
+            
+        if total_power_alerts > 0:
+            labels.append(f'Power Alerts ({total_power_alerts})')
+            sizes.append(total_power_alerts)
+            colors_list.append('#f9ca24')
+        
+        ax.pie(sizes, labels=labels, colors=colors_list, autopct='%1.1f%%', startangle=90)
+        ax.set_title('Overall Alert Distribution', fontsize=14, fontweight='bold')
+        
+        # Save to buffer
+        buffer = io.BytesIO()
+        plt.savefig(buffer, format='png', bbox_inches='tight', dpi=300)
+        buffer.seek(0)
+        
+        # Create ReportLab Image
+        charts.append(Image(buffer, width=300, height=200))
+        plt.close(fig)
+    
+    # Battery Alert Breakdown Pie Chart
+    if battery_critical + battery_low + battery_off > 0:
+        fig, ax = plt.subplots(figsize=(6, 4))
+        
+        battery_labels = []
+        battery_sizes = []
+        battery_colors = []
+        
+        if battery_critical > 0:
+            battery_labels.append(f'Critical (1-10%) ({battery_critical})')
+            battery_sizes.append(battery_critical)
+            battery_colors.append('#e74c3c')
+            
+        if battery_low > 0:
+            battery_labels.append(f'Low (11-20%) ({battery_low})')
+            battery_sizes.append(battery_low)
+            battery_colors.append('#f39c12')
+            
+        if battery_off > 0:
+            battery_labels.append(f'Battery Off (0%) ({battery_off})')
+            battery_sizes.append(battery_off)
+            battery_colors.append('#95a5a6')
+        
+        ax.pie(battery_sizes, labels=battery_labels, colors=battery_colors, autopct='%1.1f%%', startangle=90)
+        ax.set_title('Battery Alert Breakdown', fontsize=14, fontweight='bold')
+        
+        # Save to buffer
+        buffer = io.BytesIO()
+        plt.savefig(buffer, format='png', bbox_inches='tight', dpi=300)
+        buffer.seek(0)
+        
+        charts.append(Image(buffer, width=300, height=200))
+        plt.close(fig)
+    
+    # Tissue Alert Breakdown Pie Chart
+    if empty_alerts + low_alerts + full_alerts > 0:
+        fig, ax = plt.subplots(figsize=(6, 4))
+        
+        tissue_labels = []
+        tissue_sizes = []
+        tissue_colors = []
+        
+        if empty_alerts > 0:
+            tissue_labels.append(f'Empty ({empty_alerts})')
+            tissue_sizes.append(empty_alerts)
+            tissue_colors.append('#e74c3c')
+            
+        if low_alerts > 0:
+            tissue_labels.append(f'Low ({low_alerts})')
+            tissue_sizes.append(low_alerts)
+            tissue_colors.append('#f39c12')
+            
+        if full_alerts > 0:
+            tissue_labels.append(f'Full ({full_alerts})')
+            tissue_sizes.append(full_alerts)
+            tissue_colors.append('#27ae60')
+        
+        ax.pie(tissue_sizes, labels=tissue_labels, colors=tissue_colors, autopct='%1.1f%%', startangle=90)
+        ax.set_title('Tissue Alert Breakdown', fontsize=14, fontweight='bold')
+        
+        # Save to buffer
+        buffer = io.BytesIO()
+        plt.savefig(buffer, format='png', bbox_inches='tight', dpi=300)
+        buffer.seek(0)
+        
+        charts.append(Image(buffer, width=300, height=200))
+        plt.close(fig)
+    
+    return charts
 
 
 def generate_html_report(analytics_data, filename, period):
@@ -1136,7 +1476,7 @@ def download_csv_analytics(request):
         filename = f"analytics_report_{period}_{timestamp}.csv"
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
         writer = csv.writer(response)
-        writer.writerow(['Device Name', 'Room', 'Floor', 'Period', 'Entries', 'Tamper', 'Empty', 'Low', 'Full', 'Battery(%)', 'Usage'])
+        writer.writerow(['Device Name', 'Room', 'Floor', 'Period', 'Entries', 'Tissue Alerts', 'Battery Alerts', 'Tamper', 'Power Issues', 'Battery(%)', 'Usage', 'Battery Critical', 'Battery Low', 'Battery Off'])
         for device in analytics_data.get('data', []):
             device_name = device.get('device_name', f"Device {device.get('device_id', 'Unknown')}")
             room = device.get('room', 'N/A')
@@ -1158,18 +1498,27 @@ def download_csv_analytics(request):
                         usage_str = 'N/A'
                 else:
                     usage_str = 'N/A'
+                
+                # Calculate alert summaries
+                tissue_alerts = period_data.get('total_tissue_alerts', 0)
+                battery_alerts = period_data.get('total_battery_alerts', 0)
+                power_alerts = period_data.get('total_power_alerts', 0)
+                
                 writer.writerow([
                     device_name,
                     room,
                     floor,
                     period_data.get('period_name', period_data.get('period', 'Unknown')),
                     period_data.get('total_entries', 0),
+                    f"Empty:{period_data.get('empty_alerts', 0)}, Low:{period_data.get('low_alerts', 0)}, Full:{period_data.get('full_alerts', 0)}",
+                    f"Critical:{period_data.get('battery_critical_alerts', 0)}, Low:{period_data.get('battery_low_alerts', 0)}, Off:{period_data.get('battery_off_alerts', 0)}",
                     period_data.get('tamper_alerts', 0),
-                    period_data.get('empty_alerts', 0),
-                    period_data.get('low_alerts', 0),
-                    period_data.get('full_alerts', 0),
+                    f"PowerOff:{period_data.get('power_off_alerts', 0)}, NoPower:{period_data.get('no_power_alerts', 0)}",
                     battery_str,
-                    usage_str
+                    usage_str,
+                    period_data.get('battery_critical_alerts', 0),
+                    period_data.get('battery_low_alerts', 0),
+                    period_data.get('battery_off_alerts', 0)
                 ])
         return response
     except Exception as e:
@@ -1339,6 +1688,7 @@ def battery_usage_analytics(request):
             ).count()
             
             battery_critical_count = device_data.filter(
+                battery_percentage__gt=0,  # Exclude 0% (that's battery off)
                 battery_percentage__lte=10
             ).count()
             

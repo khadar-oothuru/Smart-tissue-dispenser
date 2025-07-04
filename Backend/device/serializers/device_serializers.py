@@ -25,7 +25,7 @@ class DeviceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Device
         fields = ['id', 'name', 'device_id', 'room_number', 'floor_number', 
-                  'registration_type', 'metadata', 'tissue_type', 'meter_capacity', 
+                  'registration_type', 'metadata', 'tissue_type', 'gender', 'meter_capacity', 
                   'refer_value', 'added_by', 'added_by_username', 
                   'created_at', 'model', 'firmware_version']
         read_only_fields = ['created_at', 'added_by', 'registration_type', 'refer_value']

@@ -22,9 +22,16 @@ class Device(models.Model):
     # New fields for tissue type and meter capacity
     tissue_type = models.CharField(
         max_length=50,
-        choices=[('hand_towel', 'Hand Towel'), ('toilet_paper', 'Toilet Paper')],
+        choices=[('hand_towel', 'Hand Towel'), ('toilet_paper', 'Rest Room Paper')],
         default='hand_towel',
         help_text="Type of tissue in the dispenser"
+    )
+    gender = models.CharField(
+        max_length=10,
+        choices=[('male', 'Male'), ('female', 'Female')],
+        blank=True,
+        null=True,
+        help_text="Gender for rest room paper dispensers (Men/Women rest room)"
     )
     meter_capacity = models.IntegerField(
         default=500,
