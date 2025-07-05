@@ -246,7 +246,7 @@ const AddDeviceModal = ({
 
               {/* Tissue Type and Meter Capacity Information */}
               <View style={styles.metadataRow}>
-                <Text style={styles.metadataLabel}>Tissue Type:</Text>{" "}
+                <Text style={styles.metadataLabel}>Tissue Type:</Text>
                 <Text style={styles.metadataValue}>
                   {editingDevice.tissue_type === "hand_towel"
                     ? "Hand Towel"

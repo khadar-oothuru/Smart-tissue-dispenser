@@ -54,6 +54,7 @@ export default function Analytics() {
   const [isFirstLoad, setIsFirstLoad] = useState(true);
   const [downloading, setDownloading] = useState(false);
   const [downloadCancelled, setDownloadCancelled] = useState(false);
+  const [dataUpdateCounter, setDataUpdateCounter] = useState(0);
 
   // Date range state
   const [selectedDateRange, setSelectedDateRange] = useState({
@@ -61,6 +62,28 @@ export default function Analytics() {
     endDate: endOfDay(new Date()),
     label: "Last 7 Days",
   });
+
+  // Enhanced period change handler
+  const handlePeriodChange = useCallback((newPeriod) => {
+    setSelectedPeriod(newPeriod);
+    setDataUpdateCounter((prev) => prev + 1);
+    showToast(`Period changed to ${newPeriod}`);
+  }, []);
+
+  // Enhanced device change handler
+  const handleDeviceChange = useCallback(
+    (newDevice) => {
+      setSelectedDevice(newDevice);
+      setDataUpdateCounter((prev) => prev + 1);
+      const deviceName =
+        newDevice === "all"
+          ? "All Devices"
+          : devices.find((d) => d.id === newDevice)?.name ||
+            `Device ${newDevice}`;
+      showToast(`Device changed to ${deviceName}`);
+    },
+    [devices]
+  );
 
   // Custom Alert States
   const [customAlert, setCustomAlert] = useState({
@@ -182,8 +205,16 @@ export default function Analytics() {
   // Handle date range change
   const handleDateRangeChange = useCallback((dateRange) => {
     setSelectedDateRange(dateRange);
+    setDataUpdateCounter((prev) => prev + 1);
     showToast(`Date range updated: ${dateRange.label}`);
   }, []);
+
+  // Manual refresh function for debugging
+  const handleManualRefresh = useCallback(async () => {
+    setDataUpdateCounter((prev) => prev + 1);
+    showToast("Refreshing analytics data...");
+    await loadTimeBasedData();
+  }, [loadTimeBasedData]);
 
   // Only fetch devices on first load, then let time-based effect handle analytics
   const loadAllData = useCallback(async () => {
@@ -194,8 +225,7 @@ export default function Analytics() {
         setIsFirstLoad(false);
         showToast("Analytics data loaded successfully");
       }
-    } catch (error) {
-      console.error("Failed to load analytics data:", error);
+    } catch (_error) {
       showErrorAlert(
         "Data Loading Failed",
         "Unable to fetch analytics data. Please check your connection and try again.",
@@ -205,17 +235,35 @@ export default function Analytics() {
   }, [accessToken, isFirstLoad, fetchDevices, showErrorAlert]);
   const loadTimeBasedData = useCallback(async () => {
     if (!accessToken) return;
+
     try {
       const deviceId = selectedDevice === "all" ? null : selectedDevice;
+
+      // Always pass date range if available - let backend handle the filtering
+      let startDate = null;
+      let endDate = null;
+
+      // Pass date range if it exists and has valid dates
+      if (selectedDateRange?.startDate && selectedDateRange?.endDate) {
+        // Ensure dates are properly formatted as ISO strings
+        startDate =
+          selectedDateRange.startDate instanceof Date
+            ? selectedDateRange.startDate.toISOString()
+            : selectedDateRange.startDate;
+        endDate =
+          selectedDateRange.endDate instanceof Date
+            ? selectedDateRange.endDate.toISOString()
+            : selectedDateRange.endDate;
+      }
+
       await fetchTimeBasedAnalytics(
         accessToken,
         selectedPeriod,
         deviceId,
-        selectedDateRange.startDate,
-        selectedDateRange.endDate
+        startDate,
+        endDate
       );
-    } catch (error) {
-      console.error("Failed to load time-based data:", error);
+    } catch (_error) {
       showErrorAlert(
         "Time-based Data Error",
         "Failed to load time-based analytics. The data might be temporarily unavailable.",
@@ -246,7 +294,6 @@ export default function Analytics() {
     ) {
       loadTimeBasedData();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     selectedPeriod,
     selectedDevice,
@@ -265,8 +312,6 @@ export default function Analytics() {
       );
       return false;
     }
-
-    console.log("Download triggered for format:", format);
 
     // Reset cancellation flag at the start
     setDownloadCancelled(false);
@@ -287,7 +332,6 @@ export default function Analytics() {
         },
         () => {
           // Cancel callback - reset any processing states
-          console.log("Download cancelled by user");
           setDownloadCancelled(true);
           setDownloading(false);
           resolve(false);
@@ -308,16 +352,32 @@ export default function Analytics() {
       }
 
       const deviceId = selectedDevice === "all" ? null : selectedDevice;
+
+      // Only pass date range if it's different from the default weekly range
+      let startDate = null;
+      let endDate = null;
+
+      // Check if user has selected a custom date range (not the default "Last 7 Days")
+      if (
+        selectedDateRange?.label !== "Last 7 Days" &&
+        selectedDateRange?.startDate &&
+        selectedDateRange?.endDate
+      ) {
+        startDate = selectedDateRange.startDate.toISOString();
+        endDate = selectedDateRange.endDate.toISOString();
+      }
+
       const result = await downloadAnalytics(
         accessToken,
         selectedPeriod,
         format,
-        deviceId
+        deviceId,
+        startDate,
+        endDate
       );
 
       // Check if download was cancelled
       if (downloadCancelled) {
-        console.log("Download was cancelled by user");
         return false;
       }
 
@@ -332,7 +392,6 @@ export default function Analytics() {
       if (Platform.OS === "web") {
         // Check if download was cancelled
         if (downloadCancelled) {
-          console.log("Download was cancelled by user");
           return false;
         }
 
@@ -368,7 +427,6 @@ export default function Analytics() {
 
       // Check if download was cancelled before processing
       if (downloadCancelled) {
-        console.log("Download was cancelled by user");
         return false;
       }
 
@@ -383,7 +441,6 @@ export default function Analytics() {
       if (format === "pdf") {
         // Check if download was cancelled
         if (downloadCancelled) {
-          console.log("Download was cancelled by user");
           return false;
         }
 
@@ -442,8 +499,8 @@ export default function Analytics() {
                 );
                 return true;
               }
-            } catch (androidError) {
-              console.log("Android PDF download failed:", androidError);
+            } catch (_androidError) {
+              // Error handling for Android PDF download
             }
           } // Fallback for PDF
           showCustomAlert(
@@ -462,7 +519,6 @@ export default function Analytics() {
 
       // Check if download was cancelled before writing file
       if (downloadCancelled) {
-        console.log("Download was cancelled by user");
         return false;
       }
 
@@ -492,8 +548,8 @@ export default function Analytics() {
               );
               return true;
             }
-          } catch (androidError) {
-            console.log("Android direct download failed:", androidError);
+          } catch (_androidError) {
+            // Error handling for Android direct download
           }
         } // iOS or Android fallback
         showCustomAlert(
@@ -537,8 +593,6 @@ export default function Analytics() {
 
       return true;
     } catch (error) {
-      console.error("Download/Share failed:", error);
-
       let errorMessage =
         "An unexpected error occurred while processing your request.";
       if (error.message.includes("No analytics data")) {
@@ -566,27 +620,16 @@ export default function Analytics() {
 
   // Debug function to check PDF data
   const debugPdfData = (data, format) => {
-    console.log(`[PDF Debug] Format: ${format}`);
-    console.log(`[PDF Debug] Data type:`, typeof data);
-    console.log(`[PDF Debug] Data length:`, data?.length);
-
     if (format === "pdf") {
       // Check if it's valid base64
       try {
         if (typeof data === "string") {
           // Check if it starts with PDF header (when decoded)
-          const binaryData = atob(data.substring(0, 100)); // Check first 100 chars
-          console.log(
-            `[PDF Debug] First few bytes:`,
-            binaryData.substring(0, 10)
-          );
-          console.log(
-            `[PDF Debug] Starts with PDF header:`,
-            binaryData.startsWith("%PDF")
-          );
+          atob(data.substring(0, 100)); // Check first 100 chars
+          // Validate PDF format silently
         }
-      } catch (e) {
-        console.log(`[PDF Debug] Error checking PDF header:`, e.message);
+      } catch (_e) {
+        // Error checking PDF header silently
       }
     }
   };
@@ -624,15 +667,18 @@ export default function Analytics() {
           <AnalyticsHeader
             onDateRangeChange={handleDateRangeChange}
             selectedDateRange={selectedDateRange}
+            onRefresh={handleManualRefresh}
+            isLoading={analyticsLoading}
           />
           <View style={styles.tabContentContainer}>
             <TimeBasedTab
+              key={`${selectedPeriod}_${selectedDevice}_${selectedDateRange?.label}_${dataUpdateCounter}`}
               timeBasedData={timeBasedData || {}}
               devices={devices || []}
               selectedPeriod={selectedPeriod}
               selectedDevice={selectedDevice}
-              onPeriodChange={setSelectedPeriod}
-              onDeviceChange={setSelectedDevice}
+              onPeriodChange={handlePeriodChange}
+              onDeviceChange={handleDeviceChange}
               onDownload={handleDownload}
               downloading={downloading}
               cancelled={downloadCancelled}

@@ -38,48 +38,44 @@ export const testQRCodeFormats = () => {
     "http://example.com",
   ];
 
-  console.log("🧪 Testing QR Code Formats:");
-  console.log("================================");
-
-  testCodes.forEach((code, index) => {
-    console.log(`\n--- Test ${index + 1}: "${code}" ---`);
-
+  // Testing QR Code Formats (results processed internally)
+  const results = testCodes.map((code, index) => {
     // Test with the main validation function
     const result = validateAndParseQRCode(code);
-    console.log(
-      "Validation Result:",
-      result.success ? "✅ SUCCESS" : "❌ FAILED"
-    );
 
-    if (result.success) {
-      console.log("Type:", result.type);
-      console.log("Data:", result.data);
-      console.log("Action:", result.action);
-      console.log("Message:", result.message);
-    } else {
-      console.log("Error:", result.error);
-    }
+    const testResult = {
+      test: index + 1,
+      code,
+      success: result.success,
+      type: result.type,
+      data: result.data,
+      action: result.action,
+      message: result.message,
+      error: result.error,
+    };
 
     // Additional debug info for WiFi codes
     if (code.toUpperCase().startsWith("WIFI:")) {
-      const debugInfo = debugWiFiQRCode(code);
-      console.log("Debug Info:", debugInfo);
+      testResult.debugInfo = debugWiFiQRCode(code);
     }
+
+    return testResult;
   });
 
-  console.log("\n================================");
-  console.log("QR Code Format Testing Complete");
+  return results;
 };
 
 /**
  * Debug a specific QR code that's failing
  */
 export const debugSpecificQRCode = (qrData) => {
-  console.log("🔍 Debugging Specific QR Code:");
-  console.log("Raw Data:", qrData);
-  console.log("Data Type:", typeof qrData);
-  console.log("Data Length:", qrData?.length || 0);
-  console.log("First 100 chars:", qrData?.substring(0, 100) || "N/A");
+  // Debugging Specific QR Code (data processed internally)
+  const debugInfo = {
+    rawData: qrData,
+    dataType: typeof qrData,
+    dataLength: qrData?.length || 0,
+    firstChars: qrData?.substring(0, 100) || "N/A",
+  };
 
   // Check for common issues
   const issues = [];
@@ -110,18 +106,8 @@ export const debugSpecificQRCode = (qrData) => {
     }
   }
 
-  if (issues.length > 0) {
-    console.log("⚠️ Potential Issues Found:");
-    issues.forEach((issue, index) => {
-      console.log(`  ${index + 1}. ${issue}`);
-    });
-  } else {
-    console.log("✅ No obvious formatting issues detected");
-  }
-
   // Test parsing
   const result = validateAndParseQRCode(qrData);
-  console.log("Parse Result:", result);
 
   return {
     qrData,
@@ -188,26 +174,31 @@ export const generateMobileWiFiQR = (
   // Most mobile phones generate WiFi QR codes in this format
   const qrCode = `WIFI:T:${security};S:${ssid};P:${password};H:${hidden};;`;
 
-  console.log("📱 Generated Mobile WiFi QR Code:");
-  console.log("SSID:", ssid);
-  console.log("Security:", security);
-  console.log("Hidden:", hidden);
-  console.log("QR Code:", qrCode);
+  // Generated Mobile WiFi QR Code (logged internally)
+  const qrInfo = {
+    ssid,
+    security,
+    hidden,
+    qrCode,
+  };
 
   // Test the generated QR code
   const testResult = validateAndParseQRCode(qrCode);
-  console.log("Test Result:", testResult.success ? "✅ Valid" : "❌ Invalid");
 
-  return qrCode;
+  return { qrCode, qrInfo, testResult };
 };
 
 // Export for manual testing in console
 export const runQRTests = () => {
-  console.log("🚀 Running QR Code Tests...");
-  testQRCodeFormats();
+  // Running QR Code Tests (results processed internally)
+  const formatResults = testQRCodeFormats();
 
-  console.log("\n🔧 Testing Mobile WiFi QR Generation:");
-  generateMobileWiFiQR("Home_WiFi", "password123", "WPA2", false);
-  generateMobileWiFiQR("Guest Network", "", "nopass", false);
-  generateMobileWiFiQR("Hidden_Network", "secret", "WPA", true);
+  // Testing Mobile WiFi QR Generation
+  const wifiTests = [
+    generateMobileWiFiQR("Home_WiFi", "password123", "WPA2", false),
+    generateMobileWiFiQR("Guest Network", "", "nopass", false),
+    generateMobileWiFiQR("Hidden_Network", "secret", "WPA", true),
+  ];
+
+  return { formatResults, wifiTests };
 };

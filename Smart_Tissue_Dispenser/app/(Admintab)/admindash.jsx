@@ -145,11 +145,12 @@ export default function AdminDash() {
         },
       ];
     } else if (selectedAlertType === "battery") {
-      // Battery alerts distribution - All 4 levels
+      // Battery alerts distribution - All levels including separate Battery Off
       let criticalBatteryCount = 0,
         lowBatteryCount = 0,
         mediumBatteryCount = 0,
         goodBatteryCount = 0,
+        batteryOffCount = 0,
         powerOffCount = 0;
 
       if (
@@ -158,6 +159,17 @@ export default function AdminDash() {
         realtimeStatus.length > 0
       ) {
         realtimeStatus.forEach((device) => {
+          // Debug logging for first few devices
+          if (device === realtimeStatus[0]) {
+            console.log("Sample Device Data:", {
+              device_id: device.device_id,
+              power_status: device.power_status,
+              battery_percentage: device.battery_percentage,
+              battery_critical: device.battery_critical,
+              battery_low: device.battery_low,
+            });
+          }
+
           // Enhanced power off detection logic - consistent with stats calculation
           const isPowerOff = (powerStatus) => {
             if (powerStatus === null || powerStatus === undefined) return false;
@@ -186,15 +198,16 @@ export default function AdminDash() {
 
           // Battery status classification based on percentage
           let batteryStatus = null;
-          if (
+
+          // Check for 0% battery first, regardless of power status
+          if (batteryPercentage === 0) {
+            batteryStatus = "battery_off";
+          } else if (
             !deviceIsPowerOff &&
             !deviceIsNoPower &&
             batteryPercentage !== null
           ) {
-            if (batteryPercentage === 0) {
-              // 0% battery is "battery off", not critical - handle separately if needed
-              batteryStatus = "battery_off";
-            } else if (batteryPercentage > 0 && batteryPercentage <= 10) {
+            if (batteryPercentage > 0 && batteryPercentage <= 10) {
               batteryStatus = "critical";
             } else if (batteryPercentage > 10 && batteryPercentage <= 20) {
               batteryStatus = "low";
@@ -205,11 +218,11 @@ export default function AdminDash() {
             }
           }
 
-          // Count based on status
-          if (deviceIsPowerOff || deviceIsNoPower) {
-            powerOffCount++; // For UI purposes, group both "Power Off" and "No Power" as "Power Off"
-          } else if (batteryStatus === "battery_off") {
-            powerOffCount++; // 0% battery also counts as power-related issue for UI
+          // Count based on status - prioritize Battery Off over Power Off
+          if (batteryStatus === "battery_off") {
+            batteryOffCount++; // 0% battery gets its own category, even if power issues exist
+          } else if (deviceIsPowerOff || deviceIsNoPower) {
+            powerOffCount++; // Power status issues (renamed to "No Power")
           } else if (batteryStatus === "critical" || batteryCritical) {
             criticalBatteryCount++;
           } else if (batteryStatus === "low" || batteryLow) {
@@ -222,7 +235,24 @@ export default function AdminDash() {
         });
       }
 
+      // Debug logging to see what's happening
+      console.log("Battery Distribution Debug:", {
+        totalDevices: realtimeStatus.length,
+        batteryOffCount,
+        criticalBatteryCount,
+        lowBatteryCount,
+        mediumBatteryCount,
+        goodBatteryCount,
+        powerOffCount,
+      });
+
       return [
+        {
+          name: "Battery Off",
+          population: batteryOffCount,
+          value: batteryOffCount,
+          color: "#8B5CF6",
+        },
         {
           name: "Critical Battery",
           population: criticalBatteryCount,
@@ -248,10 +278,10 @@ export default function AdminDash() {
           color: "#10B981",
         },
         {
-          name: "Power Off",
+          name: "No Power",
           population: powerOffCount,
           value: powerOffCount,
-          color: "#8B5CF6",
+          color: "#6B46C1",
         },
       ];
     }
@@ -339,8 +369,6 @@ export default function AdminDash() {
   const fetchData = useCallback(async () => {
     if (!authLoading && accessToken && fetchDevices && fetchAllAnalyticsData) {
       try {
-        console.log("🔄 AdminDash: Fetching initial data...");
-
         // Fetch devices and all analytics data including real-time status
         await Promise.all([
           fetchDevices(accessToken),
@@ -362,17 +390,15 @@ export default function AdminDash() {
             "adminDash_realtimeStatus",
             JSON.stringify(storeData.realtimeStatus || [])
           );
-        } catch (e) {
-          console.warn("Failed to cache dashboard data", e);
+        } catch (_e) {
+          // Failed to cache dashboard data
         }
-
-        console.log("✅ AdminDash: Data fetched successfully");
 
         if (isFirstLoad) {
           setIsFirstLoad(false);
         }
-      } catch (error) {
-        console.error("❌ AdminDash: Error fetching data:", error);
+      } catch (_error) {
+        // Error fetching data
       }
     }
   }, [
@@ -390,16 +416,12 @@ export default function AdminDash() {
       fetchDeviceStatusSummary
     ) {
       try {
-        console.log("🔄 AdminDash: Refreshing real-time data...");
-
         await Promise.all([
           fetchDeviceRealtimeStatus(accessToken),
           fetchDeviceStatusSummary(accessToken),
         ]);
-
-        console.log("✅ AdminDash: Real-time data refreshed");
-      } catch (error) {
-        console.error("❌ AdminDash: Error refreshing real-time data:", error);
+      } catch (_error) {
+        // Error refreshing real-time data
       }
     }
   }, [
@@ -426,8 +448,8 @@ export default function AdminDash() {
           setSummaryData(JSON.parse(cachedSummaryDataStr));
         if (cachedRealtimeStatusStr)
           setRealtimeStatus(JSON.parse(cachedRealtimeStatusStr));
-      } catch (e) {
-        console.warn("Failed to load cached dashboard data", e);
+      } catch (_e) {
+        // Failed to load cached dashboard data
       } finally {
         setCacheLoaded(true);
       }
@@ -466,8 +488,8 @@ export default function AdminDash() {
     intervalRef.current = setInterval(() => {
       try {
         refreshRealtimeData();
-      } catch (error) {
-        console.error("❌ AdminDash: Error in interval refresh:", error);
+      } catch (_error) {
+        // Error in interval refresh
       }
     }, 30000); // 30 seconds
 
@@ -480,7 +502,6 @@ export default function AdminDash() {
     };
   }, [authLoading, accessToken, isFirstLoad, refreshRealtimeData]); // Optimized pull to refresh handler
   const onRefresh = useCallback(async () => {
-    console.log("🔄 AdminDash: Manual refresh initiated...");
     setRefreshing(true);
 
     try {
@@ -488,10 +509,8 @@ export default function AdminDash() {
       if (refreshAllData && accessToken) {
         await refreshAllData(accessToken);
       }
-
-      console.log("✅ AdminDash: Manual refresh completed");
-    } catch (error) {
-      console.error("❌ AdminDash: Manual refresh failed:", error);
+    } catch (_error) {
+      // Manual refresh failed
     } finally {
       // Reduce delay for faster user experience
       setTimeout(() => {
@@ -858,8 +877,8 @@ export default function AdminDash() {
                     marginTop: 12,
                   }}
                 >
-                  No devices with{" "}
-                  {selectedAlertType === "battery" ? "battery" : "tissue"}{" "}
+                  No devices with
+                  {selectedAlertType === "battery" ? "battery" : "tissue"}
                   alerts.
                 </Text>
               )}
@@ -903,7 +922,7 @@ export default function AdminDash() {
                 textShadowRadius: 2,
               }}
             >
-              Pie Chart Alert Distribution for{" "}
+              Pie Chart Alert Distribution for
               {selectedAlertType === "tissue" ? "Tissue" : "Battery"}
             </Text>
             <Ionicons

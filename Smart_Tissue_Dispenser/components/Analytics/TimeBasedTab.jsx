@@ -25,6 +25,17 @@ const TimeBasedTab = ({
   const [showExportOptions, setShowExportOptions] = useState(false);
   const [alertType, setAlertType] = useState("tissue"); // "tissue" or "battery"
 
+  // Debug timeBasedData changes
+  React.useEffect(() => {
+    // Data updated: tracking timeBasedData changes
+  }, [
+    timeBasedData,
+    analyticsLoading,
+    selectedPeriod,
+    selectedDevice,
+    alertType,
+  ]);
+
   const handleToggleExport = () => {
     setShowExportOptions(!showExportOptions);
   };
@@ -132,7 +143,7 @@ const TimeBasedTab = ({
                   },
                 ]}
               >
-                {" "}
+                
                 <Ionicons
                   name="battery-charging-outline"
                   size={22}
@@ -238,11 +249,18 @@ const TimeBasedTab = ({
           cancelled={cancelled}
         />
       )}
-      {timeBasedData && timeBasedData.data?.length > 0 ? (
+      {/* Chart Data Section */}
+      {analyticsLoading ? (
+        <View style={styles.loadingContainer}>
+          <Text style={[styles.loadingText, { color: themeColors.text }]}>
+            Loading analytics data...
+          </Text>
+        </View>
+      ) : timeBasedData && timeBasedData.data?.length > 0 ? (
         <View style={styles.chartsContainer}>
-          {timeBasedData.data.map((deviceData) => (
+          {timeBasedData.data.map((deviceData, index) => (
             <DeviceTimeChart
-              key={deviceData.device_id}
+              key={`${deviceData.device_id}_${index}_${selectedPeriod}_${alertType}`}
               deviceData={deviceData}
               alertType={alertType}
             />
@@ -252,7 +270,9 @@ const TimeBasedTab = ({
         <EmptyState
           icon="chart-line"
           message="No data available for the selected period"
-          description="Try selecting a different time period or device"
+          description={`Try selecting a different time period${
+            selectedDevice !== "all" ? " or device" : ""
+          }`}
         />
       )}
     </View>
@@ -368,6 +388,20 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     opacity: 0.8,
     textAlign: "center",
+  },
+
+  // Loading styles
+  loadingContainer: {
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 200,
+  },
+  loadingText: {
+    fontSize: 16,
+    fontWeight: "500",
+    opacity: 0.7,
   },
 
   // Legacy styles (keeping for compatibility)

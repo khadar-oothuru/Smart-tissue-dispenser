@@ -108,8 +108,7 @@ export function useWebSocket() {
         default: `wss://${wss}/ws/notifications/`,
       });
 
-      console.log('Connecting to WebSocket:', WS_URL);
-      console.log('Using token:', accessToken ? '✓ Present' : '✗ Missing');
+      
 
       ws.current = new WebSocket(`${WS_URL}?token=${accessToken}`);
       setWebSocket(ws.current);
@@ -117,7 +116,7 @@ export function useWebSocket() {
       ws.current.onopen = () => {
         if (!isMounted.current) return;
         
-        console.log('✅ WebSocket Connected');
+        
         isConnecting.current = false;
         setConnectionStatus(true);
         resetReconnectAttempts();
@@ -135,7 +134,7 @@ export function useWebSocket() {
         
         try {
           const data = JSON.parse(e.data);
-          console.log('📨 WebSocket message:', data);
+          
 
           if (data.type === 'connection' || data.type === 'pong') {
             return;
@@ -148,19 +147,19 @@ export function useWebSocket() {
             showLocalNotification(notificationData);
           }
         } catch (error) {
-          console.error('Error parsing WebSocket message:', error);
+          
         }
       };
 
       ws.current.onerror = (e) => {
-        console.error('❌ WebSocket error:', e);
+     
         isConnecting.current = false;
       };
 
       ws.current.onclose = (e) => {
         if (!isMounted.current) return;
         
-        console.log('🔌 WebSocket disconnected:', e.code, e.reason);
+       
         isConnecting.current = false;
         setConnectionStatus(false);
         setWebSocket(null);
@@ -175,7 +174,7 @@ export function useWebSocket() {
 
         // Handle specific error codes
         if (e.code === 1006 && (e.reason?.includes('403') || e.reason?.includes('401'))) {
-          console.error('❌ Authentication error. Not reconnecting.');
+         
           return;
         }
 

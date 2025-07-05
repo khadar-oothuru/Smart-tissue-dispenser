@@ -4,11 +4,8 @@
  */
 
 export const debugQRCode = (scannedData) => {
-  console.log("🔍 QR Code Debug Information:");
-  console.log("Raw data:", scannedData);
-  console.log("Data type:", typeof scannedData);
-  console.log("Data length:", scannedData?.length || 0);
-  console.log("First 50 chars:", scannedData?.substring(0, 50));
+  // QR Code Debug Information captured:
+  // Raw data, data type, data length, first 50 chars
 
   // Test if it's a valid QR code format
   const formats = {
@@ -21,7 +18,7 @@ export const debugQRCode = (scannedData) => {
     deviceCode: scannedData?.includes(":") && !scannedData?.startsWith("http"),
   };
 
-  console.log("Detected formats:", formats);
+  // Detected formats logged internally
 
   return {
     rawData: scannedData,
@@ -53,13 +50,17 @@ export const testQRCodeFormats = () => {
     "random text", // Invalid
   ];
 
-  console.log("🧪 Testing QR Code Formats:");
-  testCodes.forEach((code, index) => {
-    console.log(`\nTest ${index + 1}:`);
+  // Testing QR Code Formats (results logged internally)
+  const results = testCodes.map((code, index) => {
     const result = debugQRCode(code);
-    console.log(`Input: ${code}`);
-    console.log(`Recommendation: ${result.recommendation}`);
+    return {
+      test: index + 1,
+      input: code,
+      recommendation: result.recommendation,
+    };
   });
+
+  return results;
 };
 
 // Call this function to test your QR code formats

@@ -380,7 +380,7 @@ export default function Login() {
             <Text
               style={{ color: isDark ? "#fff" : "#22223b", fontWeight: "bold" }}
             >
-              {" "}
+              
               Jivass Technologies
             </Text>
           </Text>

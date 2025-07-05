@@ -134,8 +134,8 @@ export const formatChartDate = (periodName, period, index = 0) => {
       month: "short",
       day: "numeric",
     });
-  } catch (error) {
-    console.warn("Error formatting chart date:", error);
+  } catch (_error) {
+    // Error formatting chart date
     // Sequential fallback dates based on index
     const baseDate = new Date();
     baseDate.setDate(baseDate.getDate() - index * 7);
@@ -227,8 +227,8 @@ const formatDateByType = (dateStr, periodType, index) => {
           day: "numeric",
         });
     }
-  } catch (error) {
-    console.warn("Error in formatDateByType:", error);
+  } catch (_error) {
+    // Error in formatDateByType
     // Generate fallback date instead of "Period X"
     const baseDate = new Date();
     baseDate.setDate(baseDate.getDate() - index * 7);

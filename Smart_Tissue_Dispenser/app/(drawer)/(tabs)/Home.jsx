@@ -812,7 +812,7 @@ const Home = () => {
                 textShadowRadius: 2,
               }}
             >
-              Pie Chart Alert Distribution for{" "}
+              Pie Chart Alert Distribution for
               {selectedAlertType === "tissue" ? "Tissue" : "Battery"}
             </Text>
             <Ionicons

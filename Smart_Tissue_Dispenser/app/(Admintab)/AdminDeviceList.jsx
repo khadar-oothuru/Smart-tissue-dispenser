@@ -28,7 +28,7 @@ import {
   completeDeviceRegistration,
 } from "../../services/wifiScanner";
 import { CustomAlert } from "../../components/common/CustomAlert";
-import { debugPermissions } from "../../utils/permissionDebugger";
+// import { debugPermissions } from "../../utils/permissionDebugger";
 
 // Import modular components
 import AddDeviceModal from "../../components/AdminDeviceComponents/AddDeviceModal";
@@ -106,16 +106,13 @@ const AdminDeviceList = () => {
         const status = await getCurrentNetworkInfo();
         setNetworkStatus(status);
 
-        // Run debug permissions if we detect any issues
+        // Handle permission issues if they occur
         if (!permissionCheck.granted) {
-          console.log("🔍 Permission issues detected, running debug report...");
-          await debugPermissions();
+          // Permission issues detected - handle appropriately
         }
-      } catch (error) {
-        console.error("Error initializing app:", error);
+      } catch (_error) {
+        // Error initializing app
         setPermissionCheckDone(true);
-        // Run debug on errors too
-        await debugPermissions();
       }
     };
 
@@ -124,8 +121,8 @@ const AdminDeviceList = () => {
       try {
         const status = await getCurrentNetworkInfo();
         setNetworkStatus(status);
-      } catch (error) {
-        console.error("Error checking network status:", error);
+      } catch (_error) {
+        // Error checking network status
       }
     }, 30000); // every 30 seconds
 
@@ -135,19 +132,16 @@ const AdminDeviceList = () => {
   useEffect(() => {
     const handleAppStateChange = async (nextAppState) => {
       if (nextAppState === "active" && !permissionCheckDone) {
-        console.log("📱 App returned to foreground, rechecking permissions...");
+        // App returned to foreground, rechecking permissions
         try {
           // Reset cache and recheck permissions
           resetPermissionCache();
           const permissionCheck = await checkWiFiPermissions();
           setPermissionsGranted(permissionCheck.granted);
           setPermissionCheckDone(true);
-          console.log(
-            "✅ Permission recheck completed:",
-            permissionCheck.granted
-          );
-        } catch (error) {
-          console.error("Error rechecking permissions:", error);
+          // Permission recheck completed
+        } catch (_error) {
+          // Error rechecking permissions
           setPermissionCheckDone(true);
         }
       }
@@ -165,11 +159,7 @@ const AdminDeviceList = () => {
 
   // Debug logging
   useEffect(() => {
-    console.log("🎯 AdminDeviceList - Auth state:", {
-      hasToken: !!accessToken,
-      tokenLength: accessToken?.length,
-      user: user?.username || "No user",
-    });
+    // AdminDeviceList - Auth state tracked internally
   }, [accessToken, user]);
 
   // Load devices on component mount and when accessToken changes
@@ -178,18 +168,18 @@ const AdminDeviceList = () => {
 
     const initializeDevices = async () => {
       if (!accessToken) {
-        console.warn("⚠️ AdminDeviceList: No access token available");
+        // AdminDeviceList: No access token available
         return;
       }
 
-      console.log("🚀 AdminDeviceList: Initializing devices...");
+      // AdminDeviceList: Initializing devices
 
       try {
         if (isMounted) {
           await loadDevices();
         }
-      } catch (err) {
-        console.error("❌ AdminDeviceList: Failed to initialize devices:", err);
+      } catch (_err) {
+        // AdminDeviceList: Failed to initialize devices
         if (isMounted) {
           setModalContent({
             title: "Error",
@@ -223,40 +213,35 @@ const AdminDeviceList = () => {
   const filteredDevices = filterDevices(searchTerm);
 
   const handleAddDevice = useCallback(() => {
-    console.log("➕ Opening add device modal");
+    // Opening add device modal
     setEditingDevice(null);
     setShowAddModal(true);
   }, []);
 
   const handleEditDevice = useCallback((device) => {
-    console.log("✏️ Opening edit device modal for:", device.name);
+    // Opening edit device modal
     setEditingDevice(device);
     setShowAddModal(true);
   }, []);
   const handleSubmitDevice = useCallback(
     async (deviceData) => {
-      console.log("💾 AdminDeviceList: Submitting device data:", deviceData);
-      const startTime = Date.now();
+      // AdminDeviceList: Submitting device data
 
       try {
         let success = false;
 
         if (editingDevice) {
           // Update existing device
-          console.log("🔄 AdminDeviceList: Updating existing device...");
+          // AdminDeviceList: Updating existing device
           success = await handleDeviceUpdate(editingDevice.id, deviceData);
         } else {
           // Add new device
-          console.log("➕ AdminDeviceList: Adding new device...");
+          // AdminDeviceList: Adding new device
           success = await handleDeviceSubmit(deviceData);
         }
 
         if (success) {
-          console.log(
-            `✅ AdminDeviceList: Device operation successful in ${
-              Date.now() - startTime
-            }ms`
-          );
+          // AdminDeviceList: Device operation successful
           setShowAddModal(false);
           setEditingDevice(null);
 
@@ -272,19 +257,14 @@ const AdminDeviceList = () => {
           setShowSuccessModal(true);
 
           // The store already handles synchronization, no additional refresh needed
-          console.log(
-            "ℹ️ AdminDeviceList: Store synchronization handled automatically"
-          );
+          // AdminDeviceList: Store synchronization handled automatically
         } else {
-          console.log("❌ AdminDeviceList: Device operation failed");
+          // AdminDeviceList: Device operation failed
         }
 
         return success;
       } catch (error) {
-        console.error(
-          "❌ AdminDeviceList: Error in handleSubmitDevice:",
-          error
-        );
+        // AdminDeviceList: Error in handleSubmitDevice
         setModalContent({
           title: "Error",
           message: error.message || "Failed to save device",
@@ -299,7 +279,7 @@ const AdminDeviceList = () => {
   );
 
   const handleDeleteDeviceConfirm = useCallback(async (device) => {
-    console.log("🗑️ Preparing to delete device:", device.name);
+    // Preparing to delete device
 
     setModalContent({
       title: "Delete Device",
@@ -311,21 +291,13 @@ const AdminDeviceList = () => {
   }, []);
   const confirmDeleteDevice = useCallback(async () => {
     const device = modalContent.deviceToDelete;
-    console.log(
-      "🗑️ AdminDeviceList: Confirming device deletion:",
-      device?.name
-    );
+    // AdminDeviceList: Confirming device deletion
     setShowDeleteConfirmModal(false);
-    const startTime = Date.now();
 
     try {
       const success = await handleDeviceDelete(device);
       if (success) {
-        console.log(
-          `✅ AdminDeviceList: Device deleted successfully in ${
-            Date.now() - startTime
-          }ms`
-        );
+        // AdminDeviceList: Device deleted successfully
         setModalContent({
           title: "Success!",
           message: "Device deleted successfully and synced across all views",
@@ -334,12 +306,10 @@ const AdminDeviceList = () => {
         });
         setShowSuccessModal(true);
         // Store synchronization is handled automatically
-        console.log(
-          "ℹ️ AdminDeviceList: Store synchronization handled automatically"
-        );
+        // AdminDeviceList: Store synchronization handled automatically
       }
     } catch (error) {
-      console.error("❌ AdminDeviceList: Error in confirmDeleteDevice:", error);
+      // AdminDeviceList: Error in confirmDeleteDevice
       setModalContent({
         title: "Error",
         message: error.message || "Failed to delete device",
@@ -350,7 +320,7 @@ const AdminDeviceList = () => {
     }
   }, [modalContent.deviceToDelete, handleDeviceDelete]); // Updated WiFi scan function to directly open QR scanner
   const handleWifiScan = useCallback(async () => {
-    console.log("� Opening WiFi QR scanner directly..."); // Open the WiFi options modal first
+    // Opening WiFi QR scanner directly
     setShowWifiOptionsModal(true);
   }, []);
   const handleWiFiSetupConfirm = useCallback(async (openSettings) => {
@@ -359,11 +329,9 @@ const AdminDeviceList = () => {
       // Open WiFi settings and reset permission check to revalidate when user returns
       const result = await openWiFiSettings();
       if (!result.success) {
-        console.error("Failed to open WiFi settings:", result.error);
+        // Failed to open WiFi settings
       } else {
-        console.log(
-          "📱 Opened WiFi settings, will recheck permissions on return"
-        );
+        // Opened WiFi settings, will recheck permissions on return
         // Reset permission state and cache to recheck when user returns to app
         resetPermissionCache();
         setPermissionsGranted(false);
@@ -380,8 +348,8 @@ const AdminDeviceList = () => {
             setWifiDevices([]); // Empty array for manual entry
           }
           setShowWifiModal(true);
-        } catch (error) {
-          console.error("Post-settings device scan failed:", error);
+        } catch (_error) {
+          // Post-settings device scan failed
           setWifiDevices([]);
           setShowWifiModal(true);
         }
@@ -399,18 +367,16 @@ const AdminDeviceList = () => {
   // Updated WiFi connect function
   const handleConnectWifi = useCallback(
     async (deviceData) => {
-      console.log("🔗 Connecting to device with data:", deviceData);
-      console.log("🔗 Device data type:", typeof deviceData);
-      console.log("🔗 Device data keys:", Object.keys(deviceData || {}));
+      // Connecting to device with data
 
       try {
         // Validate connection first
-        console.log("🔍 Starting device validation...");
+        // Starting device validation
         const validation = await validateDeviceConnection(deviceData);
-        console.log("🔍 Validation result:", validation);
+        // Validation result processed
 
         if (!validation.isValid) {
-          console.error("❌ Device validation failed:", validation);
+          // Device validation failed
           setModalContent({
             title: "Connection Error",
             message: validation.error,
@@ -444,9 +410,7 @@ const AdminDeviceList = () => {
         }
         const success = await handleWiFiConnect(deviceData);
         if (success) {
-          console.log(
-            "✅ AdminDeviceList: WiFi device registration successful"
-          );
+          // AdminDeviceList: WiFi device registration successful
           setShowWifiModal(false);
           setWifiDevices([]);
           setModalContent({
@@ -459,13 +423,11 @@ const AdminDeviceList = () => {
           setShowSuccessModal(true);
 
           // Store synchronization is handled automatically
-          console.log(
-            "ℹ️ AdminDeviceList: WiFi device state synced automatically"
-          );
+          // AdminDeviceList: WiFi device state synced automatically
         }
         return success;
-      } catch (error) {
-        console.error("❌ Error in handleConnectWifi:", error);
+      } catch (_error) {
+        // Error in handleConnectWifi
         return false;
       }
     },
@@ -479,7 +441,7 @@ const AdminDeviceList = () => {
       typeof error === "string" &&
       (error.includes("401") || error.includes("Unauthorized"))
     ) {
-      console.warn("🔒 Authentication error detected:", error);
+      // Authentication error detected
       setModalContent({
         title: "Authentication Error",
         message: "Your session has expired. Please log in again.",
@@ -491,60 +453,52 @@ const AdminDeviceList = () => {
   }, [error, clearError]);
   // Handle WiFi network scanning option
   const handleWifiNetworkScan = useCallback(async () => {
-    console.log("📡 Starting WiFi network and device discovery...");
-    console.log("🔍 DEBUG: Initial state check:", {
-      permissionsGranted,
-      permissionCheckDone,
-      networkStatus,
-    });
+    // Starting WiFi network and device discovery
+    // DEBUG: Initial state check performed
 
     setShowWifiOptionsModal(false);
     setScanning(true);
 
     try {
       // First check network connectivity and airplane mode
-      console.log("🌐 Checking network status...");
+      // Checking network status
       const detailedStatus = await getDetailedNetworkStatus();
-      console.log("🌐 Network status result:", detailedStatus);
+      // Network status result processed
       setNetworkStatus(detailedStatus);
 
       if (detailedStatus.isAirplaneModeEnabled) {
-        console.log("✈️ Airplane mode is enabled");
+        // Airplane mode is enabled
         throw new Error(
           "Please disable airplane mode to scan for WiFi networks and devices"
         );
       }
 
       if (!detailedStatus.isConnected) {
-        console.log("📡 No network connection detected");
+        // No network connection detected
         throw new Error("Please connect to a WiFi network to discover devices");
       }
 
       if (!detailedStatus.canScanWifi) {
-        console.log("🚫 WiFi scanning not available");
+        // WiFi scanning not available
         throw new Error(
           "WiFi scanning is not available. Please check your network connection"
         );
       }
 
       // Get detailed permission status for better debugging
-      console.log("🔐 Getting permission status...");
-      const permissionStatus = await getPermissionStatus();
-      console.log("📊 Permission Status:", permissionStatus);
+      // Getting permission status
+      await getPermissionStatus();
+      // Permission Status processed
 
       // Use cached permission state first, but be more intelligent about it
       let hasValidPermissions = permissionsGranted;
-      console.log("🔐 Current permission state:", {
-        hasValidPermissions,
-        permissionsGranted,
-        permissionCheckDone,
-      });
+      // Current permission state tracked
 
       // If permissions not checked yet or essential permissions are missing, check again
       if (!permissionCheckDone || !permissionsGranted) {
-        console.log("🔐 Checking WiFi permissions...");
+        // Checking WiFi permissions
         const permissionCheck = await checkWiFiPermissions();
-        console.log("🔐 Permission check result:", permissionCheck);
+        // Permission check result processed
 
         hasValidPermissions = permissionCheck.granted;
         setPermissionsGranted(permissionCheck.granted);
@@ -552,31 +506,25 @@ const AdminDeviceList = () => {
 
         // Log detailed permission info
         if (permissionCheck.essentialPermissions) {
-          console.log(
-            "Essential permissions:",
-            permissionCheck.essentialPermissions
-          );
+          // Essential permissions tracked
         }
         if (permissionCheck.optionalPermissions) {
-          console.log(
-            "Optional permissions:",
-            permissionCheck.optionalPermissions
-          );
+          // Optional permissions tracked
         }
       }
 
       // Request permissions only if essential ones are not granted
       if (!hasValidPermissions) {
-        console.log("🔐 Essential WiFi permissions not granted, requesting...");
+        // Essential WiFi permissions not granted, requesting
 
         // Reset cache before requesting to avoid stale state
         resetPermissionCache();
 
         const hasPermission = await requestWiFiPermissions();
-        console.log("🔐 Permission request result:", hasPermission);
+        // Permission request result processed
 
         if (!hasPermission.success) {
-          console.error("❌ Permission request failed:", hasPermission.error);
+          // Permission request failed
 
           const isNeverAskAgain =
             hasPermission.neverAskAgainPermissions?.length > 0;
@@ -604,42 +552,37 @@ const AdminDeviceList = () => {
           // Update cached permission state
           setPermissionsGranted(true);
           hasValidPermissions = true;
-          console.log("✅ Essential permissions granted successfully");
+          // Essential permissions granted successfully
         }
       } else {
-        console.log("✅ WiFi permissions already granted (cached)");
+        // WiFi permissions already granted (cached)
       }
 
       // Start real WiFi network scanning
-      console.log("📡 Starting WiFi network scan...");
+      // Starting WiFi network scan
       const wifiScanResult = await scanWiFiNetworks();
-      console.log("📡 WiFi scan result:", wifiScanResult);
+      // WiFi scan result processed
 
       if (!wifiScanResult.success) {
-        console.error("❌ WiFi scan failed:", wifiScanResult.error);
+        // WiFi scan failed
         throw new Error(wifiScanResult.error || "WiFi network scan failed");
       }
 
-      console.log(
-        `📡 Found ${wifiScanResult.networks?.length || 0} WiFi networks`
-      );
+      // Found WiFi networks (count tracked internally)
 
       // Start local network device scanning
-      console.log("🔍 Starting local network device scan...");
+      // Starting local network device scan
       const deviceScanResult = await scanLocalNetworkDevices();
-      console.log("🔍 Device scan result:", deviceScanResult);
+      // Device scan result processed
 
       if (deviceScanResult.success && deviceScanResult.devices?.length > 0) {
         // Found devices on the network
-        console.log(
-          `✅ Found ${deviceScanResult.devices.length} devices:`,
-          deviceScanResult.devices
-        );
+        // Found devices (details tracked internally)
         setWifiDevices(deviceScanResult.devices);
         setShowWifiModal(true);
       } else {
         // No devices found, show manual entry option
-        console.log("⚠️ No devices found on network");
+        // No devices found on network
         setModalContent({
           title: "No Devices Found",
           message: `Scanned ${
@@ -655,10 +598,10 @@ const AdminDeviceList = () => {
       }
 
       setScanning(false);
-      console.log("✅ WiFi network scan completed successfully");
+      // WiFi network scan completed successfully
     } catch (error) {
-      console.error("❌ Device discovery failed:", error);
-      console.error("❌ Error stack:", error.stack);
+      // Device discovery failed
+      // Error stack tracked internally
 
       // Determine error type and provide appropriate message
       let errorTitle = "Discovery Failed";
@@ -684,11 +627,7 @@ const AdminDeviceList = () => {
           "\n\nTip: Make sure your device is connected to the same WiFi network as your smart devices";
       }
 
-      console.log("📢 Showing error modal:", {
-        errorTitle,
-        errorMessage,
-        errorIcon,
-      });
+      // Showing error modal (details tracked internally)
 
       setModalContent({
         title: errorTitle,
@@ -702,10 +641,10 @@ const AdminDeviceList = () => {
       setShowDiscoveryFailedModal(true);
       setScanning(false);
     }
-  }, [permissionsGranted, permissionCheckDone, networkStatus]);
+  }, [permissionsGranted, permissionCheckDone]);
   // Handle WiFi QR code scanning option
   const handleWifiQRScan = useCallback(() => {
-    console.log("📱 Opening WiFi QR scanner directly...");
+    // Opening WiFi QR scanner directly
     setShowWifiOptionsModal(false); // Open QR scanner directly
     setShowQRScanner(true);
   }, []);
@@ -714,12 +653,12 @@ const AdminDeviceList = () => {
   const handleQRScanSuccess = useCallback(
     async (qrResult) => {
       setShowQRScanner(false);
-      console.log("📱 QR Scan Success:", qrResult);
+      // QR Scan Success processed
 
       try {
         if (qrResult.type === "wifi") {
           // Handle WiFi QR code - proceed directly to device registration flow
-          console.log("🔗 Processing WiFi QR code:", qrResult.data); // Generate a more robust device entry from WiFi QR data for registration
+          // Processing WiFi QR code // Generate a more robust device entry from WiFi QR data for registration
           const cleanSSID = qrResult.data.ssid.replace(/[^a-zA-Z0-9]/g, "");
           const deviceId = `WIFI_${cleanSSID.toUpperCase()}_${Date.now()
             .toString()
@@ -751,7 +690,9 @@ const AdminDeviceList = () => {
             },
           };
 
-          console.log("📱 Generated WiFi device data:", wifiDeviceData); // Show WiFi info and proceed to device registration
+          // Generated WiFi device data processed
+
+          // Show WiFi info and proceed to device registration
           setModalContent({
             title: "WiFi QR Code Detected! 📶",
             message:
@@ -761,39 +702,32 @@ const AdminDeviceList = () => {
             icon: "wifi",
             action: () => {
               try {
-                console.log("🚀 WiFi QR action triggered!");
-                console.log("📋 WiFi device data to be set:", wifiDeviceData);
-                console.log(
-                  "📋 Current wifiDevices state before setting:",
-                  wifiDevices
-                );
-                console.log("📋 Current showWifiModal state:", showWifiModal);
+                // WiFi QR action triggered
+                // WiFi device data to be set and processed
+                // Current wifiDevices state tracked
+                // Current showWifiModal state tracked
 
                 // Set the device data first
                 setWifiDevices([wifiDeviceData]);
 
-                // Log after setting
-                console.log("📋 WiFi devices set successfully");
+                // WiFi devices set successfully
 
                 // Use a longer delay to ensure state is properly updated
                 setTimeout(() => {
-                  console.log("📋 Attempting to open WiFi modal...");
-                  console.log(
-                    "📋 Current wifiDevices length:",
-                    wifiDevices.length
-                  );
+                  // Attempting to open WiFi modal
+                  // Current wifiDevices length tracked
                   setShowWifiModal(true);
-                  console.log("📋 setShowWifiModal(true) called");
+                  // setShowWifiModal(true) called
                 }, 300);
-              } catch (error) {
-                console.error("❌ Error in WiFi QR action:", error);
+              } catch (_error) {
+                // Error in WiFi QR action
               }
             },
           });
           setShowSuccessModal(true);
         } else if (qrResult.type === "device" || qrResult.type === "ip") {
           // Handle device QR code - create device object and register directly
-          console.log("📱 Processing device QR code:", qrResult.data);
+          // Processing device QR code
 
           const deviceData = {
             ip: qrResult.data.ip,
@@ -847,9 +781,9 @@ const AdminDeviceList = () => {
                 });
                 setShowSuccessModal(true);
               }
-            } catch (error) {
+            } catch (_error) {
               setScanning(false);
-              console.error("Device registration error:", error);
+              // Device registration error tracked
               // Show device details form for manual registration
               setWifiDevices([deviceData]);
               setShowWifiModal(true);
@@ -874,7 +808,7 @@ const AdminDeviceList = () => {
           setShowErrorModal(true);
         }
       } catch (error) {
-        console.error("❌ QR scan processing error:", error);
+        // QR scan processing error tracked
         setModalContent({
           title: "QR Scan Error",
           message: error.message || "Failed to process QR code",
@@ -884,7 +818,7 @@ const AdminDeviceList = () => {
         setShowErrorModal(true);
       }
     },
-    [accessToken, loadDevices, wifiDevices, showWifiModal]
+    [accessToken, loadDevices]
   );
 
   // Handle QR scan error
@@ -907,11 +841,11 @@ const AdminDeviceList = () => {
   // Handle pending WiFi QR device processing
   useEffect(() => {
     if (pendingWifiQRDevice && !showSuccessModal) {
-      console.log("🔄 Processing pending WiFi QR device:", pendingWifiQRDevice);
+      // Processing pending WiFi QR device
       setWifiDevices([pendingWifiQRDevice]);
 
       setTimeout(() => {
-        console.log("📱 Opening WiFi modal for pending device");
+        // Opening WiFi modal for pending device
         setShowWifiModal(true);
         setPendingWifiQRDevice(null); // Clear the pending device
       }, 200);
@@ -978,7 +912,6 @@ const AdminDeviceList = () => {
             />
           }
         >
-          
           {error && (
             <View style={styles.errorContainer}>
               <Text style={styles.errorText}>Error: {error}</Text>
@@ -1047,7 +980,7 @@ const AdminDeviceList = () => {
           onClose={() => setShowWifiModal(false)}
           onConnect={handleConnectWifi}
           onShowAlert={(alertContent) => {
-            console.log("📢 WiFi Modal Alert:", alertContent);
+            // WiFi Modal Alert processed
             setModalContent({
               title: alertContent.title || "Alert",
               message:
@@ -1101,17 +1034,17 @@ const AdminDeviceList = () => {
           primaryAction={{
             text: "Got it",
             onPress: () => {
-              console.log("🎯 Success modal 'Got it' button pressed");
+              // Success modal 'Got it' button pressed
               // Execute the action if it exists
               if (modalContent.action) {
-                console.log("🎯 Executing modal action...");
+                // Executing modal action
                 try {
                   modalContent.action();
-                } catch (error) {
-                  console.error("❌ Error executing modal action:", error);
+                } catch (_error) {
+                  // Error executing modal action
                 }
               } else {
-                console.log("⚠️ No modal action to execute");
+                // No modal action to execute
               }
               setShowSuccessModal(false);
             },

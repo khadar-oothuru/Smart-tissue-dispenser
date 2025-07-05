@@ -133,8 +133,8 @@ const useDeviceStore = create((set, get) => ({
     try {
       const newDevice = await apiAddDevice(token, deviceData);
 
-      console.log("🔍 Store: API Response for new device:", newDevice);
-      console.log("🔍 Store: Original deviceData:", deviceData);
+      // Store: API Response for new device tracked
+      // Store: Original deviceData tracked
 
       // Create analytics entry for the new device with enhanced fallback logic
       const newAnalyticsEntry = {
@@ -183,10 +183,7 @@ const useDeviceStore = create((set, get) => ({
       };
 
       // Log the final analytics entry to verify data integrity
-      console.log(
-        "✅ Store: Final analytics entry being added:",
-        JSON.stringify(newAnalyticsEntry, null, 2)
-      );
+      // Store: Final analytics entry being added (details tracked internally)
 
       // Create real-time status entry for immediate visibility
       const newRealtimeEntry = {
@@ -205,17 +202,7 @@ const useDeviceStore = create((set, get) => ({
         operationMessage: handleDeviceOperationResponse("add", true).message,
         lastDataUpdate: new Date().toISOString(),
       }));
-      console.log("✅ Store: New device added to analytics:", {
-        device_id: newAnalyticsEntry.device_id,
-        device_name: newAnalyticsEntry.device_name,
-        name: newAnalyticsEntry.name,
-        room_number: newAnalyticsEntry.room_number,
-        floor_number: newAnalyticsEntry.floor_number,
-        tissue_type: newAnalyticsEntry.tissue_type,
-        meter_capacity: newAnalyticsEntry.meter_capacity,
-        is_active: newAnalyticsEntry.is_active,
-        current_status: newAnalyticsEntry.current_status,
-      });
+      // Store: New device added to analytics (details tracked internally)
 
       return newDevice;
     } catch (err) {
@@ -574,11 +561,7 @@ const useDeviceStore = create((set, get) => ({
         ...response,
       };
 
-      // Log the final analytics entry to verify data integrity
-      console.log(
-        "✅ Store: Final analytics entry being added:",
-        JSON.stringify(newAnalyticsEntry, null, 2)
-      );
+     
 
       // Create real-time status entry for immediate visibility
       const newRealtimeEntry = {
@@ -677,6 +660,8 @@ const useDeviceStore = create((set, get) => ({
       throw new Error(error);
     }
 
+    
+
     set({ analyticsLoading: true, analyticsError: null });
 
     try {
@@ -688,16 +673,21 @@ const useDeviceStore = create((set, get) => ({
         endDate
       );
 
+     
+
       set({
         timeBasedData: data,
         analyticsLoading: false,
         analyticsError: null,
+        lastDataUpdate: new Date().toISOString(),
       });
 
       return data;
     } catch (err) {
       const errorMessage =
         err.message || "Failed to fetch time-based analytics";
+
+      
 
       set({
         analyticsError: errorMessage,
@@ -740,7 +730,9 @@ const useDeviceStore = create((set, get) => ({
     token,
     period = "weekly",
     format = "csv",
-    deviceId = null
+    deviceId = null,
+    startDate = null,
+    endDate = null
   ) => {
     if (!token) {
       const error = "No authentication token provided";
@@ -751,7 +743,14 @@ const useDeviceStore = create((set, get) => ({
       set({ analyticsLoading: true });
 
       // Call the API endpoint function
-      const data = await apiDownloadAnalytics(token, period, format, deviceId);
+      const data = await apiDownloadAnalytics(
+        token,
+        period,
+        format,
+        deviceId,
+        startDate,
+        endDate
+      );
 
       if (!data) {
         throw new Error("No data available to download");
@@ -915,36 +914,36 @@ const useDeviceStore = create((set, get) => ({
   }, // Force refresh all data - useful after device operations to ensure synchronization
   refreshAllData: async (token) => {
     if (!token) {
-      console.warn("No token provided for data refresh");
+     
       return;
     }
 
-    console.log("🔄 Refreshing all data for synchronization...");
+    
 
     try {
       // Use a more controlled approach to prevent hook issues
       const store = get();
       if (!store) {
-        console.warn("Store not available for refresh");
+        
         return;
       }
 
       // Refresh both devices and analytics data in parallel with error handling
       const refreshPromises = [
         store.fetchDevices(token).catch((error) => {
-          console.error("❌ Error refreshing devices:", error);
+          
           return null;
         }),
         store.fetchAllAnalyticsData(token).catch((error) => {
-          console.error("❌ Error refreshing analytics:", error);
+         
           return null;
         }),
       ];
 
       await Promise.allSettled(refreshPromises);
-      console.log("✅ Data refresh completed successfully");
+      
     } catch (error) {
-      console.error("❌ Error refreshing data:", error);
+      
     }
   },
 

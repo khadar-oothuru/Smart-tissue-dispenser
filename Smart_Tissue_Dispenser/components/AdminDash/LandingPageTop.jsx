@@ -541,6 +541,88 @@ export default function LandingPageTop({
                 <Pressable
                   style={{ flex: 1 }}
                   onPress={handlePressOffline}
+                  android_ripple={{ color: "#75757518" }}
+                >
+                  <View
+                    style={{
+                      borderRadius: 16,
+                      overflow: "hidden",
+                      backgroundColor: isDark
+                        ? themeColors.surface
+                        : themeColors.background,
+                      borderWidth: isDark ? 1 : 0,
+                      borderColor: themeColors.border,
+                      shadowColor: "#000",
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.08,
+                      shadowRadius: 6,
+                      elevation: 2,
+                      minHeight: 90,
+                      position: "relative",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <LinearGradient
+                      colors={
+                        isDark
+                          ? [themeColors.surface, themeColors.background]
+                          : ["#75757515", "#75757505"]
+                      }
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={StyleSheet.absoluteFillObject}
+                    />
+                    <View
+                      style={{
+                        alignItems: "center",
+                        justifyContent: "center",
+                        paddingVertical: 10,
+                        paddingHorizontal: 8,
+                        minHeight: 90,
+                      }}
+                    >
+                      <MaterialCommunityIcons
+                        name="power-off"
+                        size={20}
+                        color="#757575"
+                        style={{ marginBottom: 8 }}
+                      />
+                      <Text
+                        style={{
+                          fontSize: 32,
+                          fontWeight: "900",
+                          marginBottom: 4,
+                          letterSpacing: -1,
+                          color: "#616161",
+                          textAlign: "center",
+                        }}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
+                      >
+                        {Array.isArray(stats?.offlineDevicesList) &&
+                        stats.offlineDevicesList.length > 0
+                          ? stats.offlineDevicesList.length
+                          : offlineDevices}
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 11,
+                          fontWeight: "700",
+                          color: themeColors.text,
+                          opacity: 0.8,
+                          textAlign: "center",
+                        }}
+                      >
+                        Offline
+                      </Text>
+                    </View>
+                  </View>
+                </Pressable>
+
+                {/* Battery Off */}
+                <Pressable
+                  style={{ flex: 1 }}
+                  onPress={handlePressNoPower}
                   android_ripple={{ color: "#FF3B3018" }}
                 >
                   <View
@@ -582,7 +664,7 @@ export default function LandingPageTop({
                       }}
                     >
                       <MaterialCommunityIcons
-                        name="power-off"
+                        name="power-plug-off-outline"
                         size={20}
                         color="#FF3B30"
                         style={{ marginBottom: 8 }}
@@ -594,88 +676,6 @@ export default function LandingPageTop({
                           marginBottom: 4,
                           letterSpacing: -1,
                           color: "#D84315",
-                          textAlign: "center",
-                        }}
-                        numberOfLines={1}
-                        adjustsFontSizeToFit
-                      >
-                        {Array.isArray(stats?.offlineDevicesList) &&
-                        stats.offlineDevicesList.length > 0
-                          ? stats.offlineDevicesList.length
-                          : offlineDevices}
-                      </Text>
-                      <Text
-                        style={{
-                          fontSize: 11,
-                          fontWeight: "700",
-                          color: themeColors.text,
-                          opacity: 0.8,
-                          textAlign: "center",
-                        }}
-                      >
-                        Offline
-                      </Text>
-                    </View>
-                  </View>
-                </Pressable>
-
-                {/* Battery Off */}
-                <Pressable
-                  style={{ flex: 1 }}
-                  onPress={handlePressNoPower}
-                  android_ripple={{ color: "#8B5CF618" }}
-                >
-                  <View
-                    style={{
-                      borderRadius: 16,
-                      overflow: "hidden",
-                      backgroundColor: isDark
-                        ? themeColors.surface
-                        : themeColors.background,
-                      borderWidth: isDark ? 1 : 0,
-                      borderColor: themeColors.border,
-                      shadowColor: "#000",
-                      shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: 0.08,
-                      shadowRadius: 6,
-                      elevation: 2,
-                      minHeight: 90,
-                      position: "relative",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <LinearGradient
-                      colors={
-                        isDark
-                          ? [themeColors.surface, themeColors.background]
-                          : ["#8B5CF615", "#8B5CF605"]
-                      }
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={StyleSheet.absoluteFillObject}
-                    />
-                    <View
-                      style={{
-                        alignItems: "center",
-                        justifyContent: "center",
-                        paddingVertical: 10,
-                        paddingHorizontal: 8,
-                        minHeight: 90,
-                      }}
-                    >
-                      <MaterialCommunityIcons
-                        name="power-plug-off-outline"
-                        size={20}
-                        color="#8B5CF6"
-                        style={{ marginBottom: 8 }}
-                      />
-                      <Text
-                        style={{
-                          fontSize: 32,
-                          fontWeight: "900",
-                          marginBottom: 4,
-                          letterSpacing: -1,
-                          color: "#8B5CF6",
                           textAlign: "center",
                         }}
                         numberOfLines={1}

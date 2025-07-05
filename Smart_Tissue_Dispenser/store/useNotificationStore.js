@@ -124,7 +124,7 @@ const useNotificationStore = create()(
           const { showLoading = true, isRefresh = false } = options;
           
           if (!accessToken) {
-            console.log('No auth token for fetching notifications');
+            
             return { success: false, error: 'No auth token' };
           }
 
@@ -143,7 +143,7 @@ const useNotificationStore = create()(
             
             return { success: true, data };
           } catch (error) {
-            console.error('Error fetching notifications:', error);
+            
             set((state) => { 
               state.error = error.message || 'Failed to fetch notifications';
             });
@@ -165,13 +165,13 @@ const useNotificationStore = create()(
               state.unreadCount = data.count || 0;
             });
           } catch (error) {
-            // console.error('Error fetching unread count:', error);
+            
           }
         },
 
         markAsRead: async (accessToken, notificationId) => {
           if (!accessToken) {
-            console.log('No auth token for marking notification as read');
+            
             return false;
           }
 
@@ -186,7 +186,7 @@ const useNotificationStore = create()(
             await apiMarkNotificationAsRead(accessToken, notificationId);
             return true;
           } catch (error) {
-            console.error('Error marking notification as read:', error);
+            
             // Revert optimistic update
             get().updateNotification(notificationId, { is_read: false });
             return false;
@@ -212,13 +212,13 @@ const useNotificationStore = create()(
             await Promise.all(
               unreadNotifications.map(n => 
                 apiMarkNotificationAsRead(accessToken, n.id).catch(e => {
-                  console.error(`Failed to mark notification ${n.id} as read:`, e);
+                  
                 })
               )
             );
             return true;
           } catch (error) {
-            console.error('Error marking all as read:', error);
+            
             // Revert on failure
             await get().fetchNotifications(accessToken, { showLoading: false });
             return false;
@@ -227,7 +227,7 @@ const useNotificationStore = create()(
 
         deleteNotification: async (accessToken, notificationId) => {
           if (!accessToken) {
-            console.log('No auth token for deleting notification');
+            
             return false;
           }
 
@@ -254,7 +254,7 @@ const useNotificationStore = create()(
               return false;
             }
           } catch (error) {
-            console.error('Error deleting notification:', error);
+          
             // Rollback
             set((state) => {
               state.notifications.splice(notificationIndex, 0, notification);
@@ -268,7 +268,7 @@ const useNotificationStore = create()(
 
         clearAll: async (accessToken) => {
           if (!accessToken) {
-            console.log('No auth token for clearing notifications');
+            
             return false;
           }
 
@@ -286,7 +286,7 @@ const useNotificationStore = create()(
             await apiClearAllNotifications(accessToken);
             return true;
           } catch (error) {
-            console.error('Error clearing all notifications:', error);
+            
             // Rollback
             set((state) => {
               state.notifications = currentNotifications;

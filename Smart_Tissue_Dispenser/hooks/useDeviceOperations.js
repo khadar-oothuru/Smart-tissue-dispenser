@@ -108,15 +108,10 @@ export const useDeviceOperations = (accessToken, showAlert) => {
         return false;
       }
       try {
-        console.log("🚀 Starting device addition...");
-        const startTime = Date.now();
-
         await addDevice(accessToken, validatedData);
-        console.log(`✅ Device added in ${Date.now() - startTime}ms`);
 
         // Device added successfully, state is already updated by the store
         // The store will also trigger background refresh for synchronization
-        console.log("ℹ️ Device state updated in store with immediate sync");
 
         if (showAlert) {
           showAlert({
@@ -194,15 +189,10 @@ export const useDeviceOperations = (accessToken, showAlert) => {
         return false;
       }
       try {
-        console.log("🔄 Starting device update...");
-        const startTime = Date.now();
-
         await updateDevice(accessToken, deviceId, validatedData);
-        console.log(`✅ Device updated in ${Date.now() - startTime}ms`);
 
         // Device updated successfully, state is already updated by the store
         // The store will also trigger background refresh for synchronization
-        console.log("ℹ️ Device state updated in store with immediate sync");
 
         if (showAlert) {
           showAlert({
@@ -241,15 +231,10 @@ export const useDeviceOperations = (accessToken, showAlert) => {
         throw new Error("Invalid device data");
       }
       try {
-        console.log("🗑️ Starting device deletion...");
-        const startTime = Date.now();
-
         await deleteDevice(accessToken, device.id);
-        console.log(`✅ Device deleted in ${Date.now() - startTime}ms`);
 
         // Device deleted successfully, state is already updated by the store
         // The store will also trigger background refresh for synchronization
-        console.log("ℹ️ Device state updated in store with immediate sync");
 
         return true;
       } catch (error) {
@@ -304,9 +289,6 @@ export const useDeviceOperations = (accessToken, showAlert) => {
           }
           // Device registered successfully, state is already updated by the store
           // The store will also trigger background refresh for synchronization
-          console.log(
-            "ℹ️ WiFi device state updated in store with immediate sync"
-          );
           return true;
         }
 

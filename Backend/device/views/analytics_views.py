@@ -1025,6 +1025,81 @@ def generate_reportlab_pdf(analytics_data, filename, period):
                         story.append(Paragraph(detail, styles['Normal']))
                     story.append(Spacer(1, 10))
             
+            # Add power alert timestamps if available
+            power_alerts_found = False
+            for period_data in periods:
+                power_timestamps = period_data.get('power_alert_timestamps', [])
+                if power_timestamps:
+                    power_alerts_found = True
+                    break
+            
+            if power_alerts_found:
+                story.append(Paragraph("⚡ Power Alert Details:", styles['Heading3']))
+                power_details = []
+                for period_data in periods:
+                    period_name = period_data.get('period_name', 'Unknown')
+                    power_timestamps = period_data.get('power_alert_timestamps', [])
+                    if power_timestamps:
+                        for alert in power_timestamps[:3]:  # Show only first 3 alerts per period
+                            alert_time = alert.get('timestamp', 'Unknown')
+                            alert_type = alert.get('type', 'Unknown')
+                            power_status = alert.get('status', 'N/A')
+                            power_details.append(f"• {period_name}: {alert_type} (Status: {power_status}) at {alert_time[:19]}")
+                
+                if power_details:
+                    for detail in power_details[:5]:  # Limit to 5 alerts per device
+                        story.append(Paragraph(detail, styles['Normal']))
+                    story.append(Spacer(1, 10))
+            
+            # Add tissue alert timestamps if available
+            tissue_alerts_found = False
+            for period_data in periods:
+                tissue_timestamps = period_data.get('tissue_alert_timestamps', [])
+                if tissue_timestamps:
+                    tissue_alerts_found = True
+                    break
+            
+            if tissue_alerts_found:
+                story.append(Paragraph("🧻 Tissue Alert Details:", styles['Heading3']))
+                tissue_details = []
+                for period_data in periods:
+                    period_name = period_data.get('period_name', 'Unknown')
+                    tissue_timestamps = period_data.get('tissue_alert_timestamps', [])
+                    if tissue_timestamps:
+                        for alert in tissue_timestamps[:3]:  # Show only first 3 alerts per period
+                            alert_time = alert.get('timestamp', 'Unknown')
+                            alert_type = alert.get('type', 'Unknown')
+                            tissue_details.append(f"• {period_name}: {alert_type} at {alert_time[:19]}")
+                
+                if tissue_details:
+                    for detail in tissue_details[:5]:  # Limit to 5 alerts per device
+                        story.append(Paragraph(detail, styles['Normal']))
+                    story.append(Spacer(1, 10))
+            
+            # Add tamper alert timestamps if available
+            tamper_alerts_found = False
+            for period_data in periods:
+                tamper_timestamps = period_data.get('tamper_alert_timestamps', [])
+                if tamper_timestamps:
+                    tamper_alerts_found = True
+                    break
+            
+            if tamper_alerts_found:
+                story.append(Paragraph("🚨 Tamper Alert Details:", styles['Heading3']))
+                tamper_details = []
+                for period_data in periods:
+                    period_name = period_data.get('period_name', 'Unknown')
+                    tamper_timestamps = period_data.get('tamper_alert_timestamps', [])
+                    if tamper_timestamps:
+                        for alert in tamper_timestamps[:3]:  # Show only first 3 alerts per period
+                            alert_time = alert.get('timestamp', 'Unknown')
+                            tamper_details.append(f"• {period_name}: TAMPER_DETECTED at {alert_time[:19]}")
+                
+                if tamper_details:
+                    for detail in tamper_details[:5]:  # Limit to 5 alerts per device
+                        story.append(Paragraph(detail, styles['Normal']))
+                    story.append(Spacer(1, 10))
+            
             # Add page break after every 2 devices
             if (device_idx + 1) % 2 == 0 and device_idx < len(analytics_data.get('data', [])) - 1:
                 story.append(PageBreak())

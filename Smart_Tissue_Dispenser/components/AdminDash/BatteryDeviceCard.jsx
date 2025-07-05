@@ -236,7 +236,7 @@ export default function BatteryDeviceCard({ device, index = 0 }) {
                   />
                   <Text style={styles.deviceLocation}>
                     Room {device.room_number || device.room || "Unknown"} •
-                    Floor{" "}
+                    Floor
                     {device.floor_number !== undefined
                       ? device.floor_number
                       : device.floor || "N/A"}

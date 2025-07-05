@@ -9,7 +9,7 @@ const API_URL = config.API_URL;
 const API_BASE_URL = `${API_URL}/device`;
 const AUTH_BASE_URL = `${API_URL}/auth`;
 
-console.log("API URL:", API_URL);
+// API URL configured
 
 // Helper for headers
 const authHeaders = (token, contentType = "application/json") => ({
@@ -500,8 +500,19 @@ export async function fetchTimeBasedAnalytics(
   try {
     const params = new URLSearchParams({ period });
     if (deviceId) params.append("device_id", deviceId);
-    if (startDate) params.append("start_date", startDate.toISOString());
-    if (endDate) params.append("end_date", endDate.toISOString());
+
+    // Handle date parameters - ensure they're strings
+    if (startDate) {
+      const dateStr =
+        startDate instanceof Date ? startDate.toISOString() : startDate;
+      params.append("start_date", dateStr);
+    }
+    if (endDate) {
+      const dateStr = endDate instanceof Date ? endDate.toISOString() : endDate;
+      params.append("end_date", dateStr);
+    }
+
+    // API Request URL tracked internally
 
     const res = await axios.get(
       `${API_BASE_URL}/device-analytics/time-based/?${params.toString()}`,
@@ -509,8 +520,11 @@ export async function fetchTimeBasedAnalytics(
         headers: authHeaders(token, null),
       }
     );
+
+    // API Response data processed
     return res.data;
   } catch (error) {
+    // API Error tracked
     throw new Error(
       getErrorMessage(error, "Failed to fetch time-based analytics")
     );
@@ -522,12 +536,16 @@ export async function downloadAnalytics(
   token,
   period = "weekly",
   format = "csv",
-  deviceId = null
+  deviceId = null,
+  startDate = null,
+  endDate = null
 ) {
   try {
     const params = new URLSearchParams();
     params.append("period", period);
     if (deviceId) params.append("device_id", deviceId);
+    if (startDate) params.append("start_date", startDate);
+    if (endDate) params.append("end_date", endDate);
     let endpoint;
     let responseType;
 
@@ -660,7 +678,7 @@ export async function downloadCSVAnalytics(
 
     if (Platform.OS === "web") {
       // Handle web download
-      if (typeof window !== 'undefined') {
+      if (typeof window !== "undefined") {
         const blob = new Blob([res.data], { type: "text/csv" });
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement("a");
@@ -712,7 +730,7 @@ export async function downloadJSONAnalytics(
 
     if (Platform.OS === "web") {
       // Handle web download
-      if (typeof window !== 'undefined') {
+      if (typeof window !== "undefined") {
         const blob = new Blob([res.data], { type: "application/json" });
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement("a");
@@ -766,7 +784,7 @@ export async function downloadPDFAnalytics(
 
     if (Platform.OS === "web") {
       // Handle web download
-      if (typeof window !== 'undefined') {
+      if (typeof window !== "undefined") {
         const contentType = res.headers["content-type"];
 
         if (contentType === "application/pdf") {

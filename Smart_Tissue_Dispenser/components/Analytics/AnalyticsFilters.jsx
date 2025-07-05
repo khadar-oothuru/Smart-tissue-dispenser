@@ -23,6 +23,7 @@ const AnalyticsFilters = ({
   const [showDevicePicker, setShowDevicePicker] = useState(false);
 
   const periods = [
+    { label: "Daily", value: "daily" },
     { label: "Weekly", value: "weekly" },
     { label: "Monthly", value: "monthly" },
     { label: "Quarterly", value: "quarterly" },
@@ -36,6 +37,24 @@ const AnalyticsFilters = ({
       value: device.id.toString(),
     })),
   ];
+
+  const handlePeriodPickerOpen = () => {
+    setShowPeriodPicker(true);
+  };
+
+  const handleDevicePickerOpen = () => {
+    setShowDevicePicker(true);
+  };
+
+  const handlePeriodSelect = (value) => {
+    onPeriodChange(value);
+    setShowPeriodPicker(false);
+  };
+
+  const handleDeviceSelect = (value) => {
+    onDeviceChange(value);
+    setShowDevicePicker(false);
+  };
 
   const renderDropdown = (label, value, onPress, showIcon = true) => (
     <TouchableOpacity
@@ -89,93 +108,104 @@ const AnalyticsFilters = ({
     selectedValue,
     onSelect,
     title
-  ) => (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
-      <TouchableOpacity
-        style={styles.modalOverlay}
-        activeOpacity={1}
-        onPress={onClose}
+  ) => {
+    return (
+      <Modal
+        visible={visible}
+        transparent
+        animationType="slide"
+        onRequestClose={onClose}
+        statusBarTranslucent={true}
       >
-        <View
-          style={[
-            styles.modalContent,
-            {
-              backgroundColor: themeColors.background,
-              borderColor: themeColors.border || themeColors.text + "20",
-            },
-          ]}
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => {
+            onClose();
+          }}
         >
           <View
             style={[
-              styles.modalHeader,
+              styles.modalContent,
               {
-                borderBottomColor:
-                  themeColors.border || themeColors.text + "10",
+                backgroundColor: themeColors.background,
+                borderColor: themeColors.border || themeColors.text + "20",
               },
             ]}
           >
-            <Text style={[styles.modalTitle, { color: themeColors.heading }]}>
-              {title}
-            </Text>
-            <TouchableOpacity onPress={onClose}>
-              <Ionicons name="close" size={24} color={themeColors.text} />
-            </TouchableOpacity>
-          </View>
-
-          <FlatList
-            data={data}
-            keyExtractor={(item) => item.value}
-            renderItem={({ item }) => (
+            <View
+              style={[
+                styles.modalHeader,
+                {
+                  borderBottomColor:
+                    themeColors.border || themeColors.text + "10",
+                },
+              ]}
+            >
+              <Text style={[styles.modalTitle, { color: themeColors.heading }]}>
+                {title}
+              </Text>
               <TouchableOpacity
-                style={[
-                  styles.modalOption,
-                  {
-                    backgroundColor:
-                      selectedValue === item.value
-                        ? themeColors.primary + "10"
-                        : "transparent",
-                    borderBottomColor:
-                      themeColors.border || themeColors.text + "10",
-                  },
-                ]}
                 onPress={() => {
-                  onSelect(item.value);
                   onClose();
                 }}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
-                <Text
+                <Ionicons name="close" size={24} color={themeColors.text} />
+              </TouchableOpacity>
+            </View>
+
+            <FlatList
+              data={data}
+              keyExtractor={(item) => item.value}
+              renderItem={({ item }) => (
+                <TouchableOpacity
                   style={[
-                    styles.modalOptionText,
+                    styles.modalOption,
                     {
-                      color:
+                      backgroundColor:
                         selectedValue === item.value
-                          ? themeColors.primary
-                          : themeColors.text,
-                      fontWeight: selectedValue === item.value ? "600" : "400",
+                          ? themeColors.primary + "10"
+                          : "transparent",
+                      borderBottomColor:
+                        themeColors.border || themeColors.text + "10",
                     },
                   ]}
+                  onPress={() => {
+                    onSelect(item.value);
+                    onClose();
+                  }}
                 >
-                  {item.label}
-                </Text>
-                {selectedValue === item.value && (
-                  <Ionicons
-                    name="checkmark"
-                    size={20}
-                    color={themeColors.primary}
-                  />
-                )}
-              </TouchableOpacity>
-            )}
-          />
-        </View>
-      </TouchableOpacity>
-    </Modal>
-  );
+                  <Text
+                    style={[
+                      styles.modalOptionText,
+                      {
+                        color:
+                          selectedValue === item.value
+                            ? themeColors.primary
+                            : themeColors.text,
+                        fontWeight:
+                          selectedValue === item.value ? "600" : "400",
+                      },
+                    ]}
+                  >
+                    {item.label}
+                  </Text>
+                  {selectedValue === item.value && (
+                    <Ionicons
+                      name="checkmark"
+                      size={20}
+                      color={themeColors.primary}
+                    />
+                  )}
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    );
+  };
 
   const getSelectedPeriodLabel = () => {
     const period = periods.find((p) => p.value === selectedPeriod);
@@ -191,33 +221,41 @@ const AnalyticsFilters = ({
     <View style={styles.container}>
       <View style={styles.row}>
         <View style={styles.filterItem}>
-          {renderDropdown("Period", getSelectedPeriodLabel(), () =>
-            setShowPeriodPicker(true)
+          {renderDropdown(
+            "Period",
+            getSelectedPeriodLabel(),
+            handlePeriodPickerOpen
           )}
         </View>
 
         <View style={styles.filterItem}>
-          {renderDropdown("Device", getSelectedDeviceLabel(), () =>
-            setShowDevicePicker(true)
+          {renderDropdown(
+            "Device",
+            getSelectedDeviceLabel(),
+            handleDevicePickerOpen
           )}
         </View>
       </View>
 
       {renderModal(
         showPeriodPicker,
-        () => setShowPeriodPicker(false),
+        () => {
+          setShowPeriodPicker(false);
+        },
         periods,
         selectedPeriod,
-        onPeriodChange,
+        handlePeriodSelect,
         "Select Period"
       )}
 
       {renderModal(
         showDevicePicker,
-        () => setShowDevicePicker(false),
+        () => {
+          setShowDevicePicker(false);
+        },
         deviceOptions,
         selectedDevice,
-        onDeviceChange,
+        handleDeviceSelect,
         "Select Device"
       )}
     </View>
@@ -296,13 +334,23 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
+    zIndex: 9999,
   },
   modalContent: {
     width: "100%",
+    maxWidth: 400,
     maxHeight: "70%",
     borderRadius: 12,
     borderWidth: 1,
     overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 10,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 10,
   },
   modalHeader: {
     flexDirection: "row",

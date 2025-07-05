@@ -1,10 +1,4 @@
-/**
- * WiFi Scanner Service with Expo compatibility
- * Provides WiFi scanning functionality with graceful fallbacks
- * - Uses react-native-wifi-reborn when available (custom dev client/production)
- * - Falls back to Expo Network API when native modules unavailable (Expo Go)
- * - Provides web compatibility with mock data
- */
+
 
 import * as Network from "expo-network";
 import { Platform, Linking, PermissionsAndroid } from "react-native";

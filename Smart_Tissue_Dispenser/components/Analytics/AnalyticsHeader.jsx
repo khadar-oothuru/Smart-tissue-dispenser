@@ -161,57 +161,6 @@ const AnalyticsHeader = ({ onDateRangeChange, selectedDateRange }) => {
             </View>
           </View>
 
-          <View style={styles.quickActions}>
-            <TouchableOpacity
-              style={[
-                styles.quickButton,
-                { backgroundColor: themeColors.primary + "20" },
-              ]}
-              onPress={() => {
-                setStartDate(subDays(new Date(), 7));
-                setEndDate(new Date());
-              }}
-            >
-              <Text
-                style={[styles.quickButtonText, { color: themeColors.primary }]}
-              >
-                Last 7 Days
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.quickButton,
-                { backgroundColor: themeColors.primary + "20" },
-              ]}
-              onPress={() => {
-                setStartDate(subDays(new Date(), 30));
-                setEndDate(new Date());
-              }}
-            >
-              <Text
-                style={[styles.quickButtonText, { color: themeColors.primary }]}
-              >
-                Last 30 Days
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.quickButton,
-                { backgroundColor: themeColors.primary + "20" },
-              ]}
-              onPress={() => {
-                setStartDate(subDays(new Date(), 90));
-                setEndDate(new Date());
-              }}
-            >
-              <Text
-                style={[styles.quickButtonText, { color: themeColors.primary }]}
-              >
-                Last 90 Days
-              </Text>
-            </TouchableOpacity>
-          </View>
-
           <View style={styles.modalActions}>
             <TouchableOpacity
               style={[
@@ -410,23 +359,6 @@ const styles = StyleSheet.create({
   dateText: {
     fontSize: 16,
     fontWeight: "500",
-  },
-  quickActions: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 24,
-  },
-  quickButton: {
-    flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    marginHorizontal: 4,
-    alignItems: "center",
-  },
-  quickButtonText: {
-    fontSize: 12,
-    fontWeight: "600",
   },
   modalActions: {
     flexDirection: "row",

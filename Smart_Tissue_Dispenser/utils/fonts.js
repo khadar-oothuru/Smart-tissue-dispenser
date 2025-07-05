@@ -9,9 +9,9 @@ export const loadFonts = async () => {
       "Ubuntu-Light": require("../assets/fonts/Ubuntu-Light.ttf"),
       "SpaceMono-Regular": require("../assets/fonts/SpaceMono-Regular.ttf"),
     });
-    console.log("Fonts loaded successfully");
-  } catch (error) {
-    console.error("Error loading fonts:", error);
+    // Fonts loaded successfully
+  } catch (_error) {
+    // Error loading fonts
   }
 };
 

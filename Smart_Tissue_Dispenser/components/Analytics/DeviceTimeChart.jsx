@@ -15,6 +15,16 @@ import {
 const DeviceTimeChart = ({ deviceData, alertType = "tissue" }) => {
   const { themeColors, isDark } = useThemeContext();
 
+  // Debug component updates
+  React.useEffect(() => {
+   
+
+    // Log the actual periods data structure for debugging
+    if (deviceData?.periods && deviceData.periods.length > 0) {
+      
+    }
+  }, [deviceData, alertType]);
+
   // Helper function to get status configuration
   const getDeviceStatusConfig = (status, device, isDark) => {
     const darkModeColors = {
@@ -37,10 +47,20 @@ const DeviceTimeChart = ({ deviceData, alertType = "tissue" }) => {
 
   // Transform device data into alert trends format for AreaLineChart
   const getAlertTrendsData = () => {
-    if (!deviceData?.periods || !Array.isArray(deviceData.periods)) return null;
+    
+
+    if (!deviceData?.periods || !Array.isArray(deviceData.periods)) {
+      
+      return null;
+    }
 
     const periods = deviceData.periods;
-    if (periods.length === 0) return null;
+    if (periods.length === 0) {
+      
+      return null;
+    }
+
+   
 
     // Extract labels and data from periods with proper date formatting
     let labels = periods.map((period, index) => {
@@ -48,6 +68,8 @@ const DeviceTimeChart = ({ deviceData, alertType = "tissue" }) => {
       // Backend sends: period_name like "Week 2024-W25", period like "2024-W25"
       return formatChartDate(period.period_name, period.period, index);
     });
+
+    
 
     // Final check: if all labels are the same, generate guaranteed unique sequential dates
     const uniqueLabels = [...new Set(labels)];
@@ -63,6 +85,8 @@ const DeviceTimeChart = ({ deviceData, alertType = "tissue" }) => {
     }
 
     if (alertType === "battery") {
+      
+
       // Extract battery alert data arrays for multi-line chart
       const batteryLowAlerts = periods.map(
         (period) => period.battery_low_alerts || 0
@@ -77,6 +101,8 @@ const DeviceTimeChart = ({ deviceData, alertType = "tissue" }) => {
       const batteryOffAlerts = periods.map(
         (period) => period.battery_off_alerts || 0
       );
+
+      
 
       // Calculate totals for macros
       const totalBatteryLow = batteryLowAlerts.reduce((a, b) => a + b, 0);
@@ -130,11 +156,15 @@ const DeviceTimeChart = ({ deviceData, alertType = "tissue" }) => {
         ],
       };
     } else {
+      
+
       // Extract tissue alert data arrays for multi-line chart (existing logic)
       const lowAlerts = periods.map((period) => period.low_alerts || 0);
       const emptyAlerts = periods.map((period) => period.empty_alerts || 0);
       const fullAlerts = periods.map((period) => period.full_alerts || 0);
       const tamperAlerts = periods.map((period) => period.tamper_alerts || 0);
+
+      
 
       // Calculate totals for macros
       const totalLowAlerts = lowAlerts.reduce((a, b) => a + b, 0);
@@ -242,89 +272,104 @@ const DeviceTimeChart = ({ deviceData, alertType = "tissue" }) => {
             Room {deviceData.room} • Floor {deviceData.floor}
           </Text>
         </View>
-      </View>{" "}
+      </View>
       {deviceData.periods.length > 0 && (
         <>
           {/* Use AreaLineChart for alert trends visualization */}
           {getAlertTrendsData() ? (
             <View style={styles.chartContainer}>
-              <AreaLineChart
-                data={getAlertTrendsData()}
-                title={
-                  alertType === "battery"
-                    ? "Battery Alert Trends"
-                    : "Tissue Alert Trends"
-                }
-                showPrediction={true}
-                showHighestReach={true}
-                scrollable={true}
-                formatLabel={(label, idx) => {
-                  // Labels are already formatted in getAlertTrendsData
-                  return label;
-                }}
-              />
+              {(() => {
+                const chartData = getAlertTrendsData();
+               
+             
+                return (
+                  <AreaLineChart
+                    data={chartData}
+                    title={
+                      alertType === "battery"
+                        ? "Battery Alert Trends"
+                        : "Tissue Alert Trends"
+                    }
+                    showPrediction={true}
+                    showHighestReach={true}
+                    scrollable={true}
+                    formatLabel={(label, idx) => {
+                      // Labels are already formatted in getAlertTrendsData
+                      return label;
+                    }}
+                  />
+                );
+              })()}
 
               {/* Display alert macros below the chart with glass effect */}
-              {getAlertTrendsData().macros &&
-                getAlertTrendsData().macros.length > 0 && (
-                  <View style={styles.glassMacrosContainer}>
-                    <View style={styles.macrosGrid}>
-                      {getAlertTrendsData().macros.map((macro, index) => (
-                        <View
-                          key={index}
-                          style={[
-                            styles.glassMacroItem,
-                            {
-                              backgroundColor: isDark
-                                ? themeColors.surface
-                                : themeColors.background,
-                              borderColor: isDark
-                                ? themeColors.border
-                                : "rgba(255, 255, 255, 0.3)",
-                            },
-                          ]}
-                        >
-                          <LinearGradient
-                            colors={
-                              isDark
-                                ? [themeColors.surface, themeColors.background]
-                                : [macro.color + "15", macro.color + "05"]
-                            }
-                            style={StyleSheet.absoluteFillObject}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 1 }}
-                          />
+              {(() => {
+                const chartData = getAlertTrendsData();
+                return (
+                  chartData?.macros &&
+                  chartData.macros.length > 0 && (
+                    <View style={styles.glassMacrosContainer}>
+                      <View style={styles.macrosGrid}>
+                        {chartData.macros.map((macro, index) => (
                           <View
+                            key={index}
                             style={[
-                              styles.macroIndicator,
-                              { backgroundColor: macro.color },
-                            ]}
-                          />
-                          <Text
-                            style={[
-                              styles.glassMacroValue,
+                              styles.glassMacroItem,
                               {
-                                color: isDark
-                                  ? themeColors.heading
-                                  : macro.color,
+                                backgroundColor: isDark
+                                  ? themeColors.surface
+                                  : themeColors.background,
+                                borderColor: isDark
+                                  ? themeColors.border
+                                  : "rgba(255, 255, 255, 0.3)",
                               },
                             ]}
                           >
-                            {macro.value}
-                          </Text>
-                          <Text
-                            style={[
-                              styles.glassMacroName,
-                              { color: themeColors.text },
-                            ]}
-                          >
-                            {macro.name}
-                          </Text>
-                        </View>
-                      ))}
+                            <LinearGradient
+                              colors={
+                                isDark
+                                  ? [
+                                      themeColors.surface,
+                                      themeColors.background,
+                                    ]
+                                  : [macro.color + "15", macro.color + "05"]
+                              }
+                              style={StyleSheet.absoluteFillObject}
+                              start={{ x: 0, y: 0 }}
+                              end={{ x: 1, y: 1 }}
+                            />
+                            <View
+                              style={[
+                                styles.macroIndicator,
+                                { backgroundColor: macro.color },
+                              ]}
+                            />
+                            <Text
+                              style={[
+                                styles.glassMacroValue,
+                                {
+                                  color: isDark
+                                    ? themeColors.heading
+                                    : macro.color,
+                                },
+                              ]}
+                            >
+                              {macro.value}
+                            </Text>
+                            <Text
+                              style={[
+                                styles.glassMacroName,
+                                { color: themeColors.text },
+                              ]}
+                            >
+                              {macro.name}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
                     </View>
-                  </View>
-                )}
+                  )
+                );
+              })()}
             </View>
           ) : (
             // Fallback to original chart if alert data is not available

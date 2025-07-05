@@ -3,22 +3,22 @@
  * Handles platform-specific navigation behaviors
  */
 
-import { Platform } from 'react-native';
+import { Platform } from "react-native";
 
 /**
  * Get platform-specific navigation options
  */
 export const getWebNavigationOptions = () => {
-  if (Platform.OS === 'web') {
+  if (Platform.OS === "web") {
     return {
       // Web-specific navigation options
       headerShown: false,
       gestureEnabled: false, // Disable gestures on web
       animationEnabled: true,
-      cardStyle: { backgroundColor: 'transparent' },
+      cardStyle: { backgroundColor: "transparent" },
     };
   }
-  
+
   return {
     // Mobile-specific navigation options
     headerShown: false,
@@ -31,7 +31,7 @@ export const getWebNavigationOptions = () => {
  * Handle web-specific routing
  */
 export const handleWebNavigation = (router, route, params = {}) => {
-  if (Platform.OS === 'web') {
+  if (Platform.OS === "web") {
     // For web, we might want to handle routing differently
     // For example, using browser history or query parameters
     try {
@@ -40,8 +40,8 @@ export const handleWebNavigation = (router, route, params = {}) => {
       } else {
         router.push(route);
       }
-    } catch (error) {
-      console.error('Web navigation error:', error);
+    } catch (_error) {
+      // Web navigation error - fallback to replace
       router.replace(route);
     }
   } else {
@@ -54,19 +54,19 @@ export const handleWebNavigation = (router, route, params = {}) => {
  * Web-compatible back navigation
  */
 export const handleBackNavigation = (router) => {
-  if (Platform.OS === 'web') {
+  if (Platform.OS === "web") {
     // On web, we can use browser back or router back
-    if (typeof window !== 'undefined' && window.history.length > 1) {
+    if (typeof window !== "undefined" && window.history.length > 1) {
       window.history.back();
     } else {
-      router.replace('/');
+      router.replace("/");
     }
   } else {
     // Mobile back navigation
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace('/');
+      router.replace("/");
     }
   }
 };

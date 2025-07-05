@@ -53,22 +53,32 @@ export const DonutChart = ({ data, title, centerValue, centerLabel }) => {
     Low: "#FF9F00", // Orange for low alerts
     Full: "#10B981", // Green for full level
     // Battery alert types
+    "Battery Off": "#8B5CF6", // Purple for battery off
     "Critical Battery": "#FF3B30", // Red for critical battery
     "Low Battery": "#FF9F00", // Orange for low battery
     "Medium Battery": "#FFD600", // Yellow for medium battery
     "Good Battery": "#10B981", // Green for good battery
-    "Power Off": "#757575", // Gray for power off
+    "No Power": "#6B46C1", // Dark purple for no power
+    "Power Off": "#757575", // Gray for power off (legacy)
     // Alternate naming conventions
     tamper: "#8B5CF6",
     empty: "#FF4757",
     low: "#FF9F00",
     full: "#10B981",
+    "battery off": "#8B5CF6",
     "critical battery": "#FF3B30",
     "low battery": "#FF9F00",
     "medium battery": "#FFD600",
     "good battery": "#10B981",
+    "no power": "#6B46C1",
     "power off": "#757575",
     // Extra fallback for any case variant
+    BATTERY_OFF: "#8B5CF6",
+    battery_off: "#8B5CF6",
+    Battery_Off: "#8B5CF6",
+    NO_POWER: "#6B46C1",
+    no_power: "#6B46C1",
+    No_Power: "#6B46C1",
     POWER_OFF: "#757575",
     power_off: "#757575",
     Power_Off: "#757575",
@@ -96,10 +106,12 @@ export const DonutChart = ({ data, title, centerValue, centerLabel }) => {
             "empty",
             "low",
             "full",
+            "battery off",
             "critical battery",
             "low battery",
             "medium battery",
             "good battery",
+            "no power",
             "power off",
           ];
           const statusName = item.name?.toLowerCase();
@@ -119,11 +131,12 @@ export const DonutChart = ({ data, title, centerValue, centerLabel }) => {
     if (hasBatteryAlerts) {
       // Battery alert types
       const requiredStatuses = [
+        "Battery Off",
         "Critical Battery",
         "Low Battery",
         "Medium Battery",
         "Good Battery",
-        "Power Off",
+        "No Power",
       ];
       const existingNames = safeData.map((item) => item.name);
 
@@ -137,14 +150,15 @@ export const DonutChart = ({ data, title, centerValue, centerLabel }) => {
         }
       });
 
-      // Sort to ensure consistent order: Critical Battery, Low Battery, Medium Battery, Good Battery, Power Off
+      // Sort to ensure consistent order: Battery Off, Critical Battery, Low Battery, Medium Battery, Good Battery, No Power
       safeData.sort((a, b) => {
         const order = [
+          "Battery Off",
           "Critical Battery",
           "Low Battery",
           "Medium Battery",
           "Good Battery",
-          "Power Off",
+          "No Power",
         ];
         return order.indexOf(a.name) - order.indexOf(b.name);
       });
@@ -337,7 +351,6 @@ export const DonutChart = ({ data, title, centerValue, centerLabel }) => {
 
           return (
             <View key={index} style={[styles.legendItem, { minHeight: 32 }]}>
-              {" "}
               {/* Make legend item bigger */}
               <View
                 style={[
