@@ -19,7 +19,7 @@ const Storage = Platform.OS === 'web'
 const ThemeContext = createContext();
 
 export const ThemeProvider = ({ children }) => {
-  const [theme, setThemeState] = useState("system");
+  const [theme, setThemeState] = useState("dark");
   const [colorScheme, setColorScheme] = useState(Appearance.getColorScheme());
 
   useEffect(() => {

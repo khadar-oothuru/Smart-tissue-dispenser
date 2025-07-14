@@ -5,7 +5,7 @@ import { MaterialCommunityIcons, Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import SummaryCards from "../AdminAnalytics/SummaryCards";
 import { useRouter } from "expo-router";
-import { DonutChart, ModernBarChart } from "../Analytics/ChartComponents/index";
+import { DonutChart, ModernBarChart } from "./ChartComponents/index";
 import { useThemeContext } from "../../context/ThemeContext";
 import { createShadow } from "../../utils/webStyles";
 

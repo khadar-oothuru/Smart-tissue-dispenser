@@ -4,9 +4,9 @@ import { View, Text, StyleSheet } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useThemeContext } from "../../context/ThemeContext";
-// import { AreaLineChart } from '../AdminAnalytics/ChartComponents';
-import { AreaLineChart } from "../Analytics/ChartComponents/index";
-import AlertBreakdown from "./AlertBreakdown";
+
+import { AreaLineChart } from "./ChartComponents/index";
+// import AlertBreakdown from "./AlertBreakdown";
 import {
   formatChartDate,
   generateSequentialDates,
@@ -17,11 +17,8 @@ const DeviceTimeChart = ({ deviceData, alertType = "tissue" }) => {
 
   // Debug component updates
   React.useEffect(() => {
-   
-
     // Log the actual periods data structure for debugging
     if (deviceData?.periods && deviceData.periods.length > 0) {
-      
     }
   }, [deviceData, alertType]);
 
@@ -47,20 +44,14 @@ const DeviceTimeChart = ({ deviceData, alertType = "tissue" }) => {
 
   // Transform device data into alert trends format for AreaLineChart
   const getAlertTrendsData = () => {
-    
-
     if (!deviceData?.periods || !Array.isArray(deviceData.periods)) {
-      
       return null;
     }
 
     const periods = deviceData.periods;
     if (periods.length === 0) {
-      
       return null;
     }
-
-   
 
     // Extract labels and data from periods with proper date formatting
     let labels = periods.map((period, index) => {
@@ -68,8 +59,6 @@ const DeviceTimeChart = ({ deviceData, alertType = "tissue" }) => {
       // Backend sends: period_name like "Week 2024-W25", period like "2024-W25"
       return formatChartDate(period.period_name, period.period, index);
     });
-
-    
 
     // Final check: if all labels are the same, generate guaranteed unique sequential dates
     const uniqueLabels = [...new Set(labels)];
@@ -85,8 +74,6 @@ const DeviceTimeChart = ({ deviceData, alertType = "tissue" }) => {
     }
 
     if (alertType === "battery") {
-      
-
       // Extract battery alert data arrays for multi-line chart
       const batteryLowAlerts = periods.map(
         (period) => period.battery_low_alerts || 0
@@ -101,8 +88,6 @@ const DeviceTimeChart = ({ deviceData, alertType = "tissue" }) => {
       const batteryOffAlerts = periods.map(
         (period) => period.battery_off_alerts || 0
       );
-
-      
 
       // Calculate totals for macros
       const totalBatteryLow = batteryLowAlerts.reduce((a, b) => a + b, 0);
@@ -156,15 +141,11 @@ const DeviceTimeChart = ({ deviceData, alertType = "tissue" }) => {
         ],
       };
     } else {
-      
-
       // Extract tissue alert data arrays for multi-line chart (existing logic)
       const lowAlerts = periods.map((period) => period.low_alerts || 0);
       const emptyAlerts = periods.map((period) => period.empty_alerts || 0);
       const fullAlerts = periods.map((period) => period.full_alerts || 0);
       const tamperAlerts = periods.map((period) => period.tamper_alerts || 0);
-
-      
 
       // Calculate totals for macros
       const totalLowAlerts = lowAlerts.reduce((a, b) => a + b, 0);
@@ -280,8 +261,7 @@ const DeviceTimeChart = ({ deviceData, alertType = "tissue" }) => {
             <View style={styles.chartContainer}>
               {(() => {
                 const chartData = getAlertTrendsData();
-               
-             
+
                 return (
                   <AreaLineChart
                     data={chartData}
@@ -403,10 +383,10 @@ const DeviceTimeChart = ({ deviceData, alertType = "tissue" }) => {
             </View>
           )}
 
-          <AlertBreakdown
+          {/* <AlertBreakdown
             periods={deviceData.periods.slice(-4)}
             alertType={alertType}
-          />
+          /> */}
         </>
       )}
     </View>

@@ -116,9 +116,36 @@ export function getTissueAlertCounts(devices) {
     const isLow = status === "low" || alert === "LOW";
     const isFull = status === "full" || alert === "FULL";
 
+    // Check for battery alert state (should match battery util logic)
+    const batteryCritical = device.battery_critical === 1;
+    const batteryLow = device.battery_low === 1;
+    const batteryOff = device.battery_off === 1;
+    const batteryPercentage =
+      typeof device.battery_percentage === "number"
+        ? device.battery_percentage
+        : null;
+    const isBatteryOff = batteryOff || batteryPercentage === 0;
+    const isBatteryCritical =
+      !isBatteryOff &&
+      (batteryCritical ||
+        (batteryPercentage !== null &&
+          batteryPercentage <= 10 &&
+          batteryPercentage > 0));
+    const isBatteryLow =
+      !isBatteryOff &&
+      !isBatteryCritical &&
+      (batteryLow ||
+        (batteryPercentage !== null &&
+          batteryPercentage > 10 &&
+          batteryPercentage <= 20));
+
+    // Tamper always counted
     if (isTamper) tamperCount++;
+    // Empty should be counted regardless of battery state
     if (isEmpty) emptyCount++;
-    if (isLow) lowCount++;
+    // Low should only be counted if not in a battery alert state
+    if (isLow && !isBatteryOff && !isBatteryCritical && !isBatteryLow)
+      lowCount++;
     if (isFull) fullCount++;
   });
 

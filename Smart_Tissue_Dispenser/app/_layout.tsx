@@ -154,7 +154,7 @@ function Layout(): JSX.Element {
             <Stack.Screen name="(Admintab)" />
            
             
-            <Stack.Screen name="AlertDevicesScreen" />
+            
 
 
 
@@ -208,69 +208,14 @@ export default function RootLayout(): JSX.Element {
     }
   }, []);
 
-  // Simplified version for debugging - bypass all providers
-  if (Platform.OS === 'web') {
-    console.log('🌐 Running on web platform');
-    return (
-      <View style={{ 
-        flex: 1, 
-        justifyContent: 'center', 
-        alignItems: 'center',
-        backgroundColor: '#ffffff',
-        padding: 20
-      }}>
-        <Text style={{ 
-          fontSize: 24, 
-          color: '#000000', 
-          textAlign: 'center',
-          marginBottom: 10
-        }}>
-          🎉 Smart Tissue Dispenser
-        </Text>
-        <Text style={{ 
-          fontSize: 16, 
-          color: '#666666', 
-          textAlign: 'center' 
-        }}>
-          Web version is now working!
-        </Text>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="index" />
-        </Stack>
-      </View>
-    );
-  }
-
-  // Regular mobile version with all providers
-  try {
-    return (
-      <ThemeProvider>
-        <AuthProvider>
-          <WebSocketProvider>
-            <Layout />
-          </WebSocketProvider>
-        </AuthProvider>
-      </ThemeProvider>
-    );
-  } catch (error) {
-    console.error('RootLayout error:', error);
-    // Fallback UI
-    return (
-      <View style={{ 
-        flex: 1, 
-        justifyContent: 'center', 
-        alignItems: 'center',
-        backgroundColor: '#ffffff',
-        padding: 20
-      }}>
-        <Text style={{ 
-          fontSize: 18, 
-          color: '#ff0000', 
-          textAlign: 'center' 
-        }}>
-          App Error: {error instanceof Error ? error.message : 'Unknown error'}
-        </Text>
-      </View>
-    );
-  }
+  // Use the same layout and providers for all platforms (web and mobile)
+  return (
+    <ThemeProvider>
+      <AuthProvider>
+        <WebSocketProvider>
+          <Layout />
+        </WebSocketProvider>
+      </AuthProvider>
+    </ThemeProvider>
+  );
 }

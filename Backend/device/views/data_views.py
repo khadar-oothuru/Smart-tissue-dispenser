@@ -66,6 +66,19 @@ def receive_device_data(request):
             power_status=power_status,
             device_timestamp=request.data.get('TS')
         )
+
+        # --- Log the device alert to AppLog ---
+        try:
+            from users.models import AppLog
+            AppLog.objects.create(
+                user=None,  # No user for device-originated logs
+                level='INFO',
+                message=f"Device alert received: {request.data.get('ALERT')}",
+                source='device.receive_device_data',
+                details=f"device_id={device.id}, alert={request.data.get('ALERT')}, tamper={tamper_value}, battery={battery_percentage_val}, power_status={power_status}, count={request.data.get('count')}, refer_val={request.data.get('REFER_Val')}, total_usage={request.data.get('TOTAL_USAGE')}, device_timestamp={request.data.get('TS')}"
+            )
+        except Exception as log_exc:
+            print(f"Failed to log device alert to AppLog: {log_exc}")
         
         # Check conditions for notifications
         alert_status = request.data.get('ALERT')

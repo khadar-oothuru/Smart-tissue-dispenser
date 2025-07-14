@@ -197,16 +197,33 @@ def export_logs_csv(request):
         queryset = queryset.filter(timestamp__gte=start_date)
     if end_date:
         queryset = queryset.filter(timestamp__lte=end_date)
+
+    # Log the download action
+    try:
+        user = request.user if request.user.is_authenticated else None
+        AppLog.objects.create(
+            user=user,
+            level='INFO',
+            message='Logs CSV downloaded',
+            source='logs.export_logs_csv',
+            details=f"level={level}, start_date={start_date}, end_date={end_date}"
+        )
+    except Exception as log_exc:
+        print(f"Failed to log CSV download: {log_exc}")
+
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(['timestamp', 'level', 'message', 'source', 'details', 'user'])
+    # Write all relevant fields for AppLog
+    writer.writerow(['id', 'timestamp', 'level', 'message', 'source', 'details', 'user_id', 'user_email'])
     for log in queryset:
         writer.writerow([
-            log.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+            log.id,
+            log.timestamp.strftime('%Y-%m-%d %H:%M:%S') if log.timestamp else '',
             log.level,
             log.message,
             log.source,
             log.details,
+            log.user.id if log.user else '',
             log.user.email if log.user else ''
         ])
     response = HttpResponse(output.getvalue(), content_type='text/csv')
@@ -227,8 +244,34 @@ def export_logs_json(request):
         queryset = queryset.filter(timestamp__gte=start_date)
     if end_date:
         queryset = queryset.filter(timestamp__lte=end_date)
-    serializer = AppLogSerializer(queryset, many=True)
-    return JsonResponse(serializer.data, safe=False)
+
+    # Log the download action
+    try:
+        user = request.user if request.user.is_authenticated else None
+        AppLog.objects.create(
+            user=user,
+            level='INFO',
+            message='Logs JSON downloaded',
+            source='logs.export_logs_json',
+            details=f"level={level}, start_date={start_date}, end_date={end_date}"
+        )
+    except Exception as log_exc:
+        print(f"Failed to log JSON download: {log_exc}")
+
+    # Use values() to ensure all fields are included, including user info
+    logs_list = []
+    for log in queryset:
+        logs_list.append({
+            'id': log.id,
+            'timestamp': log.timestamp.strftime('%Y-%m-%d %H:%M:%S') if log.timestamp else '',
+            'level': log.level,
+            'message': log.message,
+            'source': log.source,
+            'details': log.details,
+            'user_id': log.user.id if log.user else None,
+            'user_email': log.user.email if log.user else None
+        })
+    return JsonResponse(logs_list, safe=False)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminUser])
@@ -244,34 +287,63 @@ def export_logs_pdf(request):
         queryset = queryset.filter(timestamp__gte=start_date)
     if end_date:
         queryset = queryset.filter(timestamp__lte=end_date)
+
+    # Log the download action
+    try:
+        user = request.user if request.user.is_authenticated else None
+        AppLog.objects.create(
+            user=user,
+            level='INFO',
+            message='Logs PDF downloaded',
+            source='logs.export_logs_pdf',
+            details=f"level={level}, start_date={start_date}, end_date={end_date}"
+        )
+    except Exception as log_exc:
+        print(f"Failed to log PDF download: {log_exc}")
+
     try:
         buffer = io.BytesIO()
         p = canvas.Canvas(buffer, pagesize=letter)
         width, height = letter
         y = height - 40
-        p.setFont("Helvetica-Bold", 14)
+        p.setFont("Helvetica-Bold", 16)
         p.drawString(40, y, "Application Logs Export")
-        y -= 30
+        y -= 25
         p.setFont("Helvetica", 10)
-        p.drawString(40, y, "Timestamp")
-        p.drawString(140, y, "Level")
-        p.drawString(200, y, "Message")
+        p.drawString(40, y, f"Exported: {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        y -= 20
+        p.setFont("Helvetica-Bold", 10)
+        p.drawString(40, y, "ID")
+        p.drawString(80, y, "Timestamp")
+        p.drawString(170, y, "Level")
+        p.drawString(220, y, "Message")
         p.drawString(400, y, "Source")
-        y -= 18
+        p.drawString(500, y, "User Email")
+        y -= 16
         p.setFont("Helvetica", 9)
         for log in queryset:
             if y < 40:
                 p.showPage()
                 y = height - 40
-            timestamp = log.timestamp.strftime('%Y-%m-%d %H:%M:%S')
-            level = log.level
-            message = (log.message or '')[:30]
-            source = (log.source or '')[:20]
-            p.drawString(40, y, timestamp)
-            p.drawString(140, y, level)
-            p.drawString(200, y, message)
-            p.drawString(400, y, source)
-            y -= 16
+                p.setFont("Helvetica-Bold", 16)
+                p.drawString(40, y, "Application Logs Export (contd)")
+                y -= 25
+                p.setFont("Helvetica-Bold", 10)
+                p.drawString(40, y, "ID")
+                p.drawString(80, y, "Timestamp")
+                p.drawString(170, y, "Level")
+                p.drawString(220, y, "Message")
+                p.drawString(400, y, "Source")
+                p.drawString(500, y, "User Email")
+                y -= 16
+                p.setFont("Helvetica", 9)
+            p.drawString(40, y, str(log.id))
+            p.drawString(80, y, log.timestamp.strftime('%Y-%m-%d %H:%M:%S') if log.timestamp else '')
+            p.drawString(170, y, log.level)
+            p.drawString(220, y, (log.message or '')[:28])
+            p.drawString(400, y, (log.source or '')[:18])
+            p.drawString(500, y, (log.user.email if log.user else '')[:20])
+            y -= 14
         p.save()
         pdf = buffer.getvalue()
         buffer.close()
@@ -280,4 +352,4 @@ def export_logs_pdf(request):
         return response
     except Exception as pdf_error:
         print(f"PDF generation error: {pdf_error}")
-        return Response({'error': f'PDF generation failed: {str(pdf_error)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR) 
+        return Response({'error': f'PDF generation failed: {str(pdf_error)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

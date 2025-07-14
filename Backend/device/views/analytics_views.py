@@ -774,33 +774,47 @@ def download_pdf_analytics(request):
         device_id = request.GET.get('device_id')
         start_date = request.GET.get('start_date')
         end_date = request.GET.get('end_date')
-        
+
         logger.info(f"PDF download requested for period: {period}, device_id: {device_id}")
-        
+
+        # --- Log the download action to AppLog ---
+        try:
+            from users.models import AppLog
+            user = request.user if request.user.is_authenticated else None
+            AppLog.objects.create(
+                user=user,
+                level='INFO',
+                message='Analytics report downloaded',
+                source='analytics_views.download_pdf_analytics',
+                details=f"period={period}, device_id={device_id}, start_date={start_date}, end_date={end_date}"
+            )
+        except Exception as log_exc:
+            logger.warning(f"Failed to log analytics download to AppLog: {log_exc}")
+
         # Get analytics data
         analytics_data = get_time_based_analytics_data(period, device_id, start_date, end_date)
         if analytics_data is None:
             logger.error(f"Invalid period specified: {period}")
             return Response({'error': 'Invalid period specified'}, status=400)
-        
+
         # Check if we have any data
         total_devices = len(analytics_data.get('data', []))
         total_periods = sum(len(d.get('periods', [])) for d in analytics_data.get('data', []))
-        
+
         logger.info(f"PDF generation: {total_devices} devices, {total_periods} total periods")
-        
+
         if total_devices == 0:
             logger.warning("No devices found for PDF generation")
             return Response({'error': 'No devices found in the system'}, status=404)
-        
+
         if total_periods == 0:
             logger.warning(f"No data found for the specified period: {period}")
             # Still generate PDF but with a message about no data
-        
+
         # Generate filename
         timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
         filename = f"analytics_report_{period}_{timestamp}"
-        
+
         # Check if reportlab is available
         pdf_available = False
         try:
@@ -809,19 +823,19 @@ def download_pdf_analytics(request):
             from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
             from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
             from reportlab.lib.enums import TA_CENTER
-            import io
             pdf_available = True
             logger.info("ReportLab available, generating PDF")
         except ImportError:
             logger.info("ReportLab not available, using HTML format")
-        
+
         if pdf_available:
             return generate_reportlab_pdf(analytics_data, filename, period)
         else:
             return generate_html_report(analytics_data, filename, period)
-            
+
     except Exception as e:
         logger.exception(f"Report generation failed: {str(e)}")
+        return Response({'error': f'Report generation failed: {str(e)}'}, status=500)
         return Response({'error': f'Report generation failed: {str(e)}'}, status=500)
 
 
@@ -943,9 +957,14 @@ def generate_reportlab_pdf(analytics_data, filename, period):
                 story.append(Spacer(1, 12))
                 continue
             
-            # Enhanced table with battery alerts
-            table_data = [['Period', 'Entries', 'Tissue Alerts', 'Battery Alerts', 'Tamper', 'Power Issues', 'Battery(%)', 'Usage']]
-            
+            # Enhanced table with alert details and timestamps
+            table_data = [
+                ['Period', 'Entries', 'Tissue Alerts', 'Tissue Alert Timestamps',
+                 'Battery Alerts', 'Battery Alert Timestamps',
+                 'Tamper', 'Tamper Alert Timestamps',
+                 'Power Issues', 'Power Alert Timestamps',
+                 'Battery(%)', 'Usage']
+            ]
             for period_data in periods:
                 # Handle battery percentage
                 battery_percentage = period_data.get('avg_battery_percentage')
@@ -956,7 +975,6 @@ def generate_reportlab_pdf(analytics_data, filename, period):
                         battery_str = 'N/A'
                 else:
                     battery_str = 'N/A'
-                
                 # Handle total usage
                 total_usage = period_data.get('avg_total_usage')
                 if total_usage is not None and total_usage != '' and total_usage != 'N/A':
@@ -966,24 +984,31 @@ def generate_reportlab_pdf(analytics_data, filename, period):
                         usage_str = 'N/A'
                 else:
                     usage_str = 'N/A'
-                
-                # Calculate alert summaries
-                tissue_alerts = period_data.get('total_tissue_alerts', 0)
-                battery_alerts = period_data.get('total_battery_alerts', 0)
-                power_alerts = period_data.get('total_power_alerts', 0)
-                
+                # Collect alert timestamps (show up to 3 per type)
+                def join_alerts(alerts, key='timestamp', type_key='type'):
+                    return '\n'.join([
+                        f"{a.get(type_key, '')} at {a.get(key, '')[:19]}" if a.get(type_key) else a.get(key, '')[:19]
+                        for a in alerts[:3]
+                    ])
+                tissue_alerts_ts = join_alerts(period_data.get('tissue_alert_timestamps', []), 'timestamp', 'type')
+                battery_alerts_ts = join_alerts(period_data.get('battery_alert_timestamps', []), 'timestamp', 'type')
+                tamper_alerts_ts = join_alerts(period_data.get('tamper_alert_timestamps', []), 'timestamp', 'type')
+                power_alerts_ts = join_alerts(period_data.get('power_alert_timestamps', []), 'timestamp', 'type')
                 table_data.append([
                     period_data.get('period_name', period_data.get('period', 'Unknown')),
                     str(period_data.get('total_entries', 0)),
                     f"E:{period_data.get('empty_alerts', 0)} L:{period_data.get('low_alerts', 0)} F:{period_data.get('full_alerts', 0)}",
+                    tissue_alerts_ts,
                     f"C:{period_data.get('battery_critical_alerts', 0)} L:{period_data.get('battery_low_alerts', 0)} O:{period_data.get('battery_off_alerts', 0)}",
+                    battery_alerts_ts,
                     str(period_data.get('tamper_alerts', 0)),
+                    tamper_alerts_ts,
                     f"Off:{period_data.get('power_off_alerts', 0)} No:{period_data.get('no_power_alerts', 0)}",
+                    power_alerts_ts,
                     battery_str,
                     usage_str
                 ])
-            
-            table = Table(table_data, colWidths=[50, 35, 55, 55, 35, 45, 40, 35])
+            table = Table(table_data, colWidths=[50, 35, 55, 60, 55, 60, 35, 60, 45, 60, 40, 35])
             table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
@@ -995,7 +1020,6 @@ def generate_reportlab_pdf(analytics_data, filename, period):
                 ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
                 ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ]))
-            
             story.append(table)
             story.append(Spacer(1, 10))
             
@@ -1551,7 +1575,14 @@ def download_csv_analytics(request):
         filename = f"analytics_report_{period}_{timestamp}.csv"
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
         writer = csv.writer(response)
-        writer.writerow(['Device Name', 'Room', 'Floor', 'Period', 'Entries', 'Tissue Alerts', 'Battery Alerts', 'Tamper', 'Power Issues', 'Battery(%)', 'Usage', 'Battery Critical', 'Battery Low', 'Battery Off'])
+        writer.writerow([
+            'Device Name', 'Room', 'Floor', 'Period', 'Entries',
+            'Tissue Alerts', 'Tissue Alert Details',
+            'Battery Alerts', 'Battery Alert Details',
+            'Tamper', 'Tamper Alert Details',
+            'Power Issues', 'Power Alert Details',
+            'Battery(%)', 'Usage',
+            'Battery Critical', 'Battery Low', 'Battery Off'])
         for device in analytics_data.get('data', []):
             device_name = device.get('device_name', f"Device {device.get('device_id', 'Unknown')}")
             room = device.get('room', 'N/A')
@@ -1579,6 +1610,15 @@ def download_csv_analytics(request):
                 battery_alerts = period_data.get('total_battery_alerts', 0)
                 power_alerts = period_data.get('total_power_alerts', 0)
                 
+                def join_alerts(alerts, keys):
+                    return '; '.join([
+                        ', '.join(f"{k}:{a.get(k, '')}" for k in keys if k in a)
+                        for a in alerts
+                    ])
+                tissue_alerts_details = join_alerts(period_data.get('tissue_alert_timestamps', []), ['type', 'timestamp', 'device_timestamp'])
+                battery_alerts_details = join_alerts(period_data.get('battery_alert_timestamps', []), ['type', 'percentage', 'timestamp', 'device_timestamp'])
+                tamper_alerts_details = join_alerts(period_data.get('tamper_alert_timestamps', []), ['timestamp', 'device_timestamp'])
+                power_alerts_details = join_alerts(period_data.get('power_alert_timestamps', []), ['type', 'status', 'timestamp', 'device_timestamp'])
                 writer.writerow([
                     device_name,
                     room,
@@ -1586,9 +1626,13 @@ def download_csv_analytics(request):
                     period_data.get('period_name', period_data.get('period', 'Unknown')),
                     period_data.get('total_entries', 0),
                     f"Empty:{period_data.get('empty_alerts', 0)}, Low:{period_data.get('low_alerts', 0)}, Full:{period_data.get('full_alerts', 0)}",
+                    tissue_alerts_details,
                     f"Critical:{period_data.get('battery_critical_alerts', 0)}, Low:{period_data.get('battery_low_alerts', 0)}, Off:{period_data.get('battery_off_alerts', 0)}",
+                    battery_alerts_details,
                     period_data.get('tamper_alerts', 0),
+                    tamper_alerts_details,
                     f"PowerOff:{period_data.get('power_off_alerts', 0)}, NoPower:{period_data.get('no_power_alerts', 0)}",
+                    power_alerts_details,
                     battery_str,
                     usage_str,
                     period_data.get('battery_critical_alerts', 0),
@@ -1659,6 +1703,19 @@ def download_json_analytics(request):
         timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
         filename = f"analytics_report_{period}_{timestamp}.json"
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        # Ensure all alert timestamps are in ISO format and all alert details are included
+        for device in analytics_data.get('data', []):
+            for period_data in device.get('periods', []):
+                for alert_type in ['tissue_alert_timestamps', 'battery_alert_timestamps', 'tamper_alert_timestamps', 'power_alert_timestamps']:
+                    if alert_type in period_data:
+                        for alert in period_data[alert_type]:
+                            if 'timestamp' in alert and alert['timestamp']:
+                                try:
+                                    import datetime
+                                    if isinstance(alert['timestamp'], datetime.datetime):
+                                        alert['timestamp'] = alert['timestamp'].isoformat()
+                                except Exception:
+                                    pass
         response.write(json.dumps(analytics_data, indent=2, default=str))
         return response
     except Exception as e:

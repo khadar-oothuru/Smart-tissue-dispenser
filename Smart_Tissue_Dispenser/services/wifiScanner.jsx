@@ -1,5 +1,3 @@
-
-
 import * as Network from "expo-network";
 import { Platform, Linking, PermissionsAndroid } from "react-native";
 
@@ -7,7 +5,7 @@ import { Platform, Linking, PermissionsAndroid } from "react-native";
 import { registerDeviceViaWiFi, checkDeviceStatus } from "../utils/api";
 
 // Web compatibility check
-const isWeb = Platform.OS === 'web';
+const isWeb = Platform.OS === "web";
 
 // Production-ready logging configuration
 const isDev = __DEV__;
@@ -81,7 +79,9 @@ const MAX_INIT_ATTEMPTS = 3;
 const initializeWifiManager = () => {
   // Skip initialization on web platform
   if (isWeb) {
-    log.info("🌐 Running on web platform - skipping native WiFi manager initialization");
+    log.info(
+      "🌐 Running on web platform - skipping native WiFi manager initialization"
+    );
     WifiManager = null;
     isWifiManagerAvailable = false;
     return false;
@@ -99,40 +99,48 @@ const initializeWifiManager = () => {
     isWifiManagerAvailable = false;
 
     // Try multiple import methods for better compatibility
-    let WifiReborn = null;    // Method 1: Direct require with proper error handling
+    let WifiReborn = null; // Method 1: Direct require with proper error handling
     try {
       WifiReborn = require("react-native-wifi-reborn");
       log.info("✅ Direct require successful");
-      
+
       // Validate the module structure
-      if (WifiReborn && typeof WifiReborn === 'object') {
+      if (WifiReborn && typeof WifiReborn === "object") {
         log.info("📱 WiFi module structure:", Object.keys(WifiReborn));
       }
     } catch (directError) {
       log.warn("⚠️ Direct require failed:", directError.message);
-      
+
       // Method 2: Try alternative import
       try {
-        const { default: WifiDefault, ...WifiMethods } = require("react-native-wifi-reborn");
+        const {
+          default: WifiDefault,
+          ...WifiMethods
+        } = require("react-native-wifi-reborn");
         WifiReborn = WifiDefault || WifiMethods;
         log.info("✅ Alternative import successful");
       } catch (altError) {
         log.warn("⚠️ Alternative import failed:", altError.message);
       }
-    }    if (!WifiReborn) {
-      throw new Error("react-native-wifi-reborn module not found or not accessible. Make sure it's properly installed and linked.");
+    }
+    if (!WifiReborn) {
+      throw new Error(
+        "react-native-wifi-reborn module not found or not accessible. Make sure it's properly installed and linked."
+      );
     }
 
     // Extract WiFi manager - try different access patterns
     WifiManager = WifiReborn.default || WifiReborn;
-    
+
     // If WifiManager is still not valid, try accessing methods directly
-    if (!WifiManager || typeof WifiManager !== 'object') {
+    if (!WifiManager || typeof WifiManager !== "object") {
       WifiManager = WifiReborn;
     }
 
     if (!WifiManager) {
-      throw new Error("WiFi manager object not found in module. The module may not be properly linked.");
+      throw new Error(
+        "WiFi manager object not found in module. The module may not be properly linked."
+      );
     }
 
     log.info("📱 WiFi Manager object loaded, validating methods...");
@@ -323,8 +331,8 @@ export const getCurrentNetworkInfo = async () => {
         connectionDetails: {
           frequency: 2400,
           signalStrength: -45,
-          bssid: "00:00:00:00:00:00"
-        }
+          bssid: "00:00:00:00:00:00",
+        },
       };
     }
 
@@ -1134,7 +1142,7 @@ export const registerSelectedDevice = async (
 export const scanWiFiNetworks = async () => {
   try {
     log.info("📡 Starting WiFi network scan...");
-    
+
     // Web platform fallback
     if (isWeb) {
       log.info("🌐 Web platform detected - returning mock WiFi data");
@@ -1147,7 +1155,7 @@ export const scanWiFiNetworks = async () => {
             frequency: 2400,
             level: -45,
             security: "WPA2",
-            isConnected: true
+            isConnected: true,
           },
           {
             SSID: "Smart-Dispenser-Demo",
@@ -1155,18 +1163,18 @@ export const scanWiFiNetworks = async () => {
             frequency: 2400,
             level: -55,
             security: "WPA2",
-            isConnected: false
-          }
+            isConnected: false,
+          },
         ],
         platform: "web",
         networkInfo: {
           isConnected: true,
           type: "wifi",
-          ssid: "Web-Demo-Network"
-        }
+          ssid: "Web-Demo-Network",
+        },
       };
     }
-    
+
     log.info("📱 WiFi Manager Status:", {
       available: !!WifiManager,
       validated: isWifiManagerAvailable,
@@ -1177,14 +1185,14 @@ export const scanWiFiNetworks = async () => {
 
     // Get current network info first
     const networkInfo = await getCurrentNetworkInfo();
-    log.info("Current network info:", networkInfo);    // Enhanced WiFi manager availability check with retry logic
+    log.info("Current network info:", networkInfo); // Enhanced WiFi manager availability check with retry logic
     if (!WifiManager || !isWifiManagerAvailable) {
       log.info("📡 Native WiFi module not available or not validated");
       log.info("Module status:", {
         WifiManager: !!WifiManager,
         isWifiManagerAvailable,
         initializationAttempts,
-        maxAttempts: MAX_INIT_ATTEMPTS
+        maxAttempts: MAX_INIT_ATTEMPTS,
       });
 
       // Try to reinitialize WiFi manager if we haven't exceeded max attempts
@@ -1196,27 +1204,35 @@ export const scanWiFiNetworks = async () => {
           log.info("✅ WiFi manager reinitialized successfully");
           // Continue with the scan
         } else {
-          log.error("❌ WiFi manager reinitialization failed - Cannot scan for networks");
+          log.error(
+            "❌ WiFi manager reinitialization failed - Cannot scan for networks"
+          );
           return {
             success: false,
-            error: "WiFi scanning not available - native module failed to initialize",
-            suggestion: "Please ensure react-native-wifi-reborn is properly installed and the app is built as a development build (not Expo Go)",
+            error:
+              "WiFi scanning not available - native module failed to initialize",
+            suggestion:
+              "Please ensure react-native-wifi-reborn is properly installed and the app is built as a development build (not Expo Go)",
             moduleError: "Native WiFi module unavailable",
-            fallback: false
+            fallback: false,
           };
         }
       } else {
-        log.error("❌ Max initialization attempts reached - Cannot scan for networks");
+        log.error(
+          "❌ Max initialization attempts reached - Cannot scan for networks"
+        );
         return {
           success: false,
-          error: "WiFi scanning not available - native module initialization failed after multiple attempts",
-          suggestion: "Please rebuild the app or check if react-native-wifi-reborn is properly installed",
+          error:
+            "WiFi scanning not available - native module initialization failed after multiple attempts",
+          suggestion:
+            "Please rebuild the app or check if react-native-wifi-reborn is properly installed",
           moduleError: "Native WiFi module failed to initialize",
           maxAttemptsReached: true,
-          fallback: false
+          fallback: false,
         };
       }
-    }    // Validate that we can actually use the WiFi manager
+    } // Validate that we can actually use the WiFi manager
     try {
       if (!WifiManager || typeof WifiManager.loadWifiList !== "function") {
         console.error(
@@ -1230,9 +1246,10 @@ export const scanWiFiNetworks = async () => {
         return {
           success: false,
           error: "WiFi scanning not available - loadWifiList method not found",
-          suggestion: "Please ensure the app is built as a development build with react-native-wifi-reborn properly linked",
+          suggestion:
+            "Please ensure the app is built as a development build with react-native-wifi-reborn properly linked",
           moduleError: "Critical method missing",
-          fallback: false
+          fallback: false,
         };
       }
 
@@ -1242,25 +1259,27 @@ export const scanWiFiNetworks = async () => {
       return {
         success: false,
         error: "WiFi scanning not available - module validation failed",
-        suggestion: "Please rebuild the app with react-native-wifi-reborn properly configured",
+        suggestion:
+          "Please rebuild the app with react-native-wifi-reborn properly configured",
         moduleError: validationError.message,
-        fallback: false
+        fallback: false,
       };
-    }    // Check if permissions are already granted first
+    } // Check if permissions are already granted first
     const permissionCheck = await checkWiFiPermissions();
 
     if (!permissionCheck.granted) {
       log.info("🔐 WiFi permissions needed for scanning...");
-      
+
       const permissionResult = await requestWiFiPermissions();
       if (!permissionResult.success) {
         console.error("Permission request failed:", permissionResult);
         return {
           success: false,
           error: "WiFi scanning requires location permissions",
-          suggestion: "Please grant location permissions in your device settings to scan for WiFi networks",
+          suggestion:
+            "Please grant location permissions in your device settings to scan for WiFi networks",
           permissionError: permissionResult.error,
-          canOpenSettings: true
+          canOpenSettings: true,
         };
       }
     } else {
@@ -1394,24 +1413,25 @@ export const scanWiFiNetworks = async () => {
         }
       } catch (scanError) {
         console.error(`WiFi scan attempt ${scanAttempts} error:`, scanError);
-        lastError = scanError;        // If this was the last attempt, handle the error
+        lastError = scanError; // If this was the last attempt, handle the error
         if (scanAttempts >= maxAttempts) {
           console.error("❌ All native scan attempts failed");
-          
+
           return {
             success: false,
-            error: "WiFi scan failed after multiple attempts: " + scanError.message,
+            error:
+              "WiFi scan failed after multiple attempts: " + scanError.message,
             suggestion:
               "Please check if WiFi is enabled and permissions are granted. Try turning WiFi off and on again.",
             scanAttempts: scanAttempts,
             nativeModule: true,
-            detailedError: scanError.message
+            detailedError: scanError.message,
           };
         }
       }
-    }    // If we get here, all attempts failed but no exception was thrown
+    } // If we get here, all attempts failed but no exception was thrown
     console.warn("❌ All scan attempts completed but no networks found");
-    
+
     return {
       success: false,
       error: "No WiFi networks found after multiple scan attempts",
@@ -1420,7 +1440,8 @@ export const scanWiFiNetworks = async () => {
       scanAttempts: scanAttempts,
       lastError: lastError?.message,
       nativeModule: true,
-    };  } catch (error) {
+    };
+  } catch (error) {
     console.error("❌ WiFi scanning error:", error);
 
     return {
@@ -1429,7 +1450,7 @@ export const scanWiFiNetworks = async () => {
       suggestion:
         "Please check WiFi settings and permissions. Make sure the app is built as a development build with react-native-wifi-reborn properly configured.",
       nativeModule: !!WifiManager,
-      detailedError: error.stack
+      detailedError: error.stack,
     };
   }
 };
@@ -1497,7 +1518,8 @@ export const scanLocalNetworkDevices = async () => {
     return {
       success: false,
       error: error.message || "Failed to scan network devices",
-      suggestion: "Try manual device entry or check network connection",    };
+      suggestion: "Try manual device entry or check network connection",
+    };
   }
 };
 
@@ -1600,8 +1622,13 @@ export const completeDeviceRegistration = async (
  */
 const formatDeviceForRegistration = (device, additionalInfo = {}) => {
   let deviceId =
-    device.hostname || device.ip?.replace(/\./g, "-") || device.device_id;
-  if (deviceId) {
+    (typeof device.hostname === "string" && device.hostname) ||
+    (typeof device.ip === "string" && device.ip
+      ? device.ip.replace(/\./g, "-")
+      : undefined) ||
+    (typeof device.device_id === "string" && device.device_id) ||
+    undefined;
+  if (typeof deviceId === "string") {
     deviceId = deviceId.replace(/[^a-zA-Z0-9-]/g, "").toUpperCase();
   } else {
     deviceId = `DEVICE_${Date.now()}`;
@@ -1949,15 +1976,18 @@ const parseWiFiQRCode = (qrData) => {
             data.security = value || "nopass";
             break;
           case "S":
-            // Unescape special characters in SSID
-            data.ssid = value.replace(/\\(.)/g, "$1");
+            // Unescape special characters in SSID, handle undefined safely
+            data.ssid = value ? String(value).replace(/\\(.)/g, "$1") : "";
             break;
           case "P":
-            // Unescape special characters in password
-            data.password = value.replace(/\\(.)/g, "$1");
+            // Unescape special characters in password, handle undefined safely
+            data.password = value ? String(value).replace(/\\(.)/g, "$1") : "";
             break;
           case "H":
-            data.hidden = value.toLowerCase() === "true";
+            data.hidden =
+              value && typeof value === "string"
+                ? value.toLowerCase() === "true"
+                : false;
             break;
           default:
             log.info(`Unknown WiFi QR field: ${key}`);

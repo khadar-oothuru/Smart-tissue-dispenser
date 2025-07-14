@@ -10,6 +10,7 @@ import {
 import { CameraView, Camera } from "expo-camera";
 import { Ionicons } from "@expo/vector-icons";
 import { useThemeContext } from "../../context/ThemeContext";
+import ManualDeviceIPEntry from "./ManualDeviceIPEntry";
 
 const WiFiQRScanner = ({ onClose, onScanSuccess, onScanError, title }) => {
   const { themeColors } = useThemeContext();
@@ -17,6 +18,8 @@ const WiFiQRScanner = ({ onClose, onScanSuccess, onScanError, title }) => {
   const [hasPermission, setHasPermission] = useState(null);
   const [scanned, setScanned] = useState(false);
   const [isActive, setIsActive] = useState(true);
+  const [manualEntry, setManualEntry] = useState(null); // {ssid, password}
+
   useEffect(() => {
     const getCameraPermissions = async () => {
       try {
@@ -37,26 +40,36 @@ const WiFiQRScanner = ({ onClose, onScanSuccess, onScanError, title }) => {
 
   const handleBarCodeScanned = ({ type, data }) => {
     if (scanned || !isActive) return;
-
     setScanned(true);
     console.log("📱 QR Code scanned:", { type, data });
-
     try {
-      // Import and use the validation function from wifiScanner service
       const { validateAndParseQRCode } = require("../../services/wifiScanner");
       const result = validateAndParseQRCode(data);
-
+      if (result.success && result.type === "wifi") {
+        console.log("Extracted IP:", result.data.ip);
+        console.log("Extracted SSID:", result.data.ssid);
+        console.log("Extracted Password:", result.data.password);
+      }
       console.log("📱 QR validation result:", result);
-
       if (result.success) {
-        // Call the callback with the validated result
+        // If WiFi QR but no IP, prompt for manual entry
+        if (
+          result.type === "wifi" &&
+          (!result.data.ip || result.data.ip === "")
+        ) {
+          setManualEntry({
+            ssid: result.data.ssid,
+            password: result.data.password,
+          });
+          setScanned(false); // allow scanning again if user cancels
+          return;
+        }
         if (onScanSuccess) {
+          // Pass the scanned data to the parent component
           onScanSuccess(result);
         }
       } else {
-        // Handle validation error - reset scan state to allow retry
         setTimeout(() => setScanned(false), 2000);
-
         if (onScanError) {
           onScanError(result.error || "Invalid QR code format");
         } else {
@@ -69,9 +82,7 @@ const WiFiQRScanner = ({ onClose, onScanSuccess, onScanError, title }) => {
       }
     } catch (error) {
       console.error("Error processing QR code:", error);
-      // Reset scan state to allow retry
       setTimeout(() => setScanned(false), 2000);
-
       if (onScanError) {
         onScanError(
           error.message || "Failed to process QR code. Please try again."
@@ -83,6 +94,7 @@ const WiFiQRScanner = ({ onClose, onScanSuccess, onScanError, title }) => {
       }
     }
   };
+
   if (hasPermission === null) {
     return (
       <SafeAreaView style={styles.container}>
@@ -117,6 +129,25 @@ const WiFiQRScanner = ({ onClose, onScanSuccess, onScanError, title }) => {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Manual IP Entry Modal */}
+      {manualEntry && (
+        <ManualDeviceIPEntry
+          ssid={manualEntry.ssid}
+          password={manualEntry.password}
+          onSubmit={({ ssid, password, ip }) => {
+            setManualEntry(null);
+            // Pass as a WiFi QR result with IP
+            if (onScanSuccess) {
+              onScanSuccess({
+                success: true,
+                type: "wifi",
+                data: { ssid, password, ip },
+              });
+            }
+          }}
+          onCancel={() => setManualEntry(null)}
+        />
+      )}
       <CameraView
         style={styles.camera}
         facing="back"
