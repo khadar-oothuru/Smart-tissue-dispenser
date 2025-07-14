@@ -19,6 +19,7 @@ import Register from "./components/auth/Register";
 import ForgotPassword from "./components/auth/ForgotPassword";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import RootRedirect from "./components/common/RootRedirect";
+import AccessDenied from "./components/common/AccessDenied";
 
 // Admin Components
 import AdminDashboard from "./components/admin/AdminDashboard";
@@ -40,6 +41,15 @@ import DeviceSummaryPage from "./components/Devices/DeviceSummaryPage";
 import Contact from "./components/admin/Contact";
 import { WebSocketProvider } from "./context/WebSocketContext";
 
+import { useAuth } from "./hooks/useAuth";
+
+const AdminOnlyRoute = ({ children }) => {
+  const { user, isAuthenticated } = useAuth();
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (user?.role !== "admin") return <AccessDenied />;
+  return children;
+};
+
 const App = () => {
   return (
     <ThemeProvider>
@@ -52,151 +62,139 @@ const App = () => {
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
-                {/* Protected Admin Routes - All routes use AdminLayout */}
+                {/* Protected Admin Routes - All routes use AdminLayout, only admin can access */}
                 <Route path="/" element={<RootRedirect />} />
-                {/* Main Dashboard */}
                 <Route
                   path="/admin"
                   element={
-                    <ProtectedRoute>
+                    <AdminOnlyRoute>
                       <AdminLayout>
                         <AdminDashboard />
                       </AdminLayout>
-                    </ProtectedRoute>
+                    </AdminOnlyRoute>
                   }
                 />
-                {/* Alert Devices Screen (All Devices, Alerts, etc) */}
                 <Route
                   path="/admin/alert-devices/:alertType?"
                   element={
-                    <ProtectedRoute>
+                    <AdminOnlyRoute>
                       <AdminLayout>
                         <AlertDevicesScreen />
                       </AdminLayout>
-                    </ProtectedRoute>
+                    </AdminOnlyRoute>
                   }
                 />
                 <Route
                   path="/admin/device-details"
                   element={
-                    <ProtectedRoute>
+                    <AdminOnlyRoute>
                       <AdminLayout>
                         <DeviceDetails />
                       </AdminLayout>
-                    </ProtectedRoute>
+                    </AdminOnlyRoute>
                   }
                 />
-                ;{/* User Management */}
                 <Route
                   path="/admin/users"
                   element={
-                    <ProtectedRoute>
+                    <AdminOnlyRoute>
                       <AdminLayout>
                         <UserManagement />
                       </AdminLayout>
-                    </ProtectedRoute>
+                    </AdminOnlyRoute>
                   }
                 />
-                {/* Device Management */}
                 <Route
                   path="/admin/devices"
                   element={
-                    <ProtectedRoute>
+                    <AdminOnlyRoute>
                       <AdminLayout>
                         <Devices />
                       </AdminLayout>
-                    </ProtectedRoute>
+                    </AdminOnlyRoute>
                   }
                 />
-                {/* Device Summary Page (cards view) */}
                 <Route
                   path="/admin/devices/summary/:type"
                   element={
-                    <ProtectedRoute>
+                    <AdminOnlyRoute>
                       <AdminLayout>
                         <DeviceSummaryPage />
                       </AdminLayout>
-                    </ProtectedRoute>
+                    </AdminOnlyRoute>
                   }
                 />
-                {/* Analytics */}
                 <Route
                   path="/admin/analytics"
                   element={
-                    <ProtectedRoute>
+                    <AdminOnlyRoute>
                       <AdminLayout>
                         <Analytics />
                       </AdminLayout>
-                    </ProtectedRoute>
+                    </AdminOnlyRoute>
                   }
                 />
-                {/* Logs */}
                 <Route
                   path="/admin/logs"
                   element={
-                    <ProtectedRoute>
+                    <AdminOnlyRoute>
                       <AdminLayout>
                         <AppLogs />
                       </AdminLayout>
-                    </ProtectedRoute>
+                    </AdminOnlyRoute>
                   }
                 />
-                {/* Power Off Devices */}
                 <Route
                   path="/admin/power-off-devices"
                   element={
-                    <ProtectedRoute>
+                    <AdminOnlyRoute>
                       <AdminLayout>
                         <PowerOffDevicesScreen />
                       </AdminLayout>
-                    </ProtectedRoute>
+                    </AdminOnlyRoute>
                   }
                 />
-                {/* Battery Alerts Devices */}
                 <Route
                   path="/admin/battery-alerts/:alertType?"
                   element={
-                    <ProtectedRoute>
+                    <AdminOnlyRoute>
                       <AdminLayout>
                         <BatteryAlertsScreen />
                       </AdminLayout>
-                    </ProtectedRoute>
+                    </AdminOnlyRoute>
                   }
                 />
-                {/* Settings */}
                 <Route
                   path="/admin/settings"
                   element={
-                    <ProtectedRoute>
+                    <AdminOnlyRoute>
                       <AdminLayout>
                         <Settings />
                       </AdminLayout>
-                    </ProtectedRoute>
+                    </AdminOnlyRoute>
                   }
                 />
-                {/* Admin Profile */}
                 <Route
                   path="/admin/profile"
                   element={
-                    <ProtectedRoute>
+                    <AdminOnlyRoute>
                       <AdminLayout>
                         <AdminProfile />
                       </AdminLayout>
-                    </ProtectedRoute>
+                    </AdminOnlyRoute>
                   }
                 />
-                {/* Notifications */}
                 <Route
                   path="/admin/notifications"
                   element={
-                    <ProtectedRoute>
+                    <AdminOnlyRoute>
                       <AdminLayout>
                         <NotificationsScreen />
                       </AdminLayout>
-                    </ProtectedRoute>
+                    </AdminOnlyRoute>
                   }
                 />
-                {/* Change Password */}
+                {/* Change Password (all authenticated users) */}
                 <Route
                   path="/change-password"
                   element={
@@ -209,11 +207,11 @@ const App = () => {
                 <Route
                   path="/admin/contact"
                   element={
-                    <ProtectedRoute>
+                    <AdminOnlyRoute>
                       <AdminLayout>
                         <Contact />
                       </AdminLayout>
-                    </ProtectedRoute>
+                    </AdminOnlyRoute>
                   }
                 />
                 {/* (Optional) Keep /contact route for non-admin use, or remove if not needed */}
