@@ -149,7 +149,7 @@ You can also use `--profile development` for internal testing builds. See your `
 
 After the build completes, EAS will provide a download link for your APK/AAB/IPA file.
 
-For more options and details, see the [EAS Build documentation](https://docs.expo.dev/build/introduction/).
+For more options and details , see the [EAS Build documentation](https://docs.expo.dev/build/introduction/).
 
 ---
 
