@@ -436,65 +436,7 @@ const AdminDashboard = () => {
     }
   }, [accessToken, isFirstLoad, fetchData]);
 
-  // Auto-refresh every 30 seconds with improved error handling
-  useEffect(() => {
-    if (!accessToken || isFirstLoad) return;
-
-    let consecutiveErrors = 0;
-    const MAX_CONSECUTIVE_ERRORS = 3;
-
-    const interval = setInterval(async () => {
-      try {
-        console.log("AdminDashboard: Starting auto-refresh...");
-        const startTime = Date.now();
-
-        await fetchAllAnalyticsData(accessToken);
-
-        const duration = Date.now() - startTime;
-        console.log(`AdminDashboard: Auto-refresh completed in ${duration}ms`);
-
-        // Reset error counter on success
-        consecutiveErrors = 0;
-      } catch (error) {
-        consecutiveErrors++;
-        console.error(
-          `AdminDashboard: Auto-refresh error (${consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS}):`,
-          error
-        );
-
-        // Log detailed error information
-        console.error("Auto-refresh error details:", {
-          message: error.message,
-          stack: error.stack,
-          timestamp: new Date().toISOString(),
-          consecutiveErrors,
-        });
-
-        // Only show toast for the first error to avoid spamming the user
-        if (consecutiveErrors === 1) {
-          const errorMessage = error.message?.includes("timeout")
-            ? "Background data refresh timed out. Some dashboard data may be stale."
-            : "Background data refresh failed. Some dashboard data may be stale.";
-
-          toast.warning(errorMessage, { autoClose: 5000 });
-        }
-
-        // If we've had too many consecutive errors, stop auto-refresh
-        if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
-          console.error(
-            "AdminDashboard: Too many consecutive auto-refresh errors. Stopping auto-refresh."
-          );
-          clearInterval(interval);
-          toast.error(
-            "Dashboard auto-refresh has been disabled due to repeated errors. Please refresh manually.",
-            { autoClose: false }
-          );
-        }
-      }
-    }, 30000);
-
-    return () => clearInterval(interval);
-  }, [accessToken, isFirstLoad, fetchAllAnalyticsData]);
+  // (Moved auto-refresh useEffect below handleRefresh definition)
 
   // Define handleRefresh with improved error handling
   const handleRefresh = useCallback(async () => {
@@ -532,6 +474,17 @@ const AdminDashboard = () => {
       setRefreshing(false);
     }
   }, [accessToken, refreshAllData]);
+
+  // Unified auto-refresh: refresh all dashboard and alert data every 1 minute
+  useEffect(() => {
+    if (!accessToken || isFirstLoad) return;
+    // Call refresh immediately on mount
+    handleRefresh();
+    const interval = setInterval(() => {
+      handleRefresh();
+    }, 60000); // 60 seconds
+    return () => clearInterval(interval);
+  }, [accessToken, isFirstLoad, handleRefresh]);
 
   // Alert Distribution Data (same as React Native version)
   const alertDistributionData = useMemo(() => {
@@ -605,14 +558,7 @@ const AdminDashboard = () => {
     }
   }, [realtimeStatus, selectedAlertType, dashboardData.totalDevices]);
 
-  // Auto-refresh functionality
-  useEffect(() => {
-    const interval = setInterval(() => {
-      handleRefresh();
-    }, 30000); // 30 seconds
-
-    return () => clearInterval(interval);
-  }, [handleRefresh]);
+  // (Removed duplicate auto-refresh useEffect)
 
   // No early return! Render modal conditionally below main return.
   // Theme-aware StatCard
@@ -1088,24 +1034,31 @@ const AdminDashboard = () => {
     // Add onClick for navigation to AlertDevicesScreen for each card
     let summaryData;
     if (selectedAlertType === "battery") {
-      // --- Battery Alert Counts (separated for clarity) ---
-      // Critical Battery: 1% - 10%
-      const criticalBatteryCount = Array.isArray(realtimeStatus)
-        ? realtimeStatus.filter(
-            (device) =>
-              typeof device.battery_percentage === "number" &&
-              device.battery_percentage >= 1 &&
-              device.battery_percentage <= 10
-          ).length
-        : 0;
+      // --- Battery Alert Counts (exclusive, matching device screen) ---
 
-      // Battery Off: 0%
+      // Battery Off: 0% and <= 20
       const batteryOffCount = Array.isArray(realtimeStatus)
-        ? realtimeStatus.filter((device) => device.battery_percentage === 0)
-            .length
+        ? realtimeStatus.filter((device) => {
+            const bp = device.battery_percentage;
+            return bp === 0 && bp <= 20;
+          }).length
         : 0;
 
-      // Low Battery: >10% and <=20% (not critical, not off)
+      // Critical Battery: 1% - 10% (not off, not >20)
+      const criticalBatteryCount = Array.isArray(realtimeStatus)
+        ? realtimeStatus.filter((device) => {
+            const bp = device.battery_percentage;
+            return (
+              typeof bp === "number" &&
+              bp >= 1 &&
+              bp <= 10 &&
+              bp !== 0 &&
+              bp <= 20
+            );
+          }).length
+        : 0;
+
+      // Low Battery: 11% - 20% (not off, not critical, not >20)
       const lowBatteryCount = Array.isArray(realtimeStatus)
         ? realtimeStatus.filter((device) => {
             const bp = device.battery_percentage;
@@ -1113,31 +1066,32 @@ const AdminDashboard = () => {
               typeof bp === "number" &&
               bp > 10 &&
               bp <= 20 &&
-              !(bp <= 10) &&
-              !(bp === 0)
+              bp !== 0 &&
+              !(bp >= 1 && bp <= 10) &&
+              bp <= 20
             );
           }).length
         : 0;
 
-      // Total Battery Alerts: sum of all three
+      // Total Battery Alerts: only critical, low, and battery off
       const totalBatteryAlerts =
         criticalBatteryCount + lowBatteryCount + batteryOffCount;
 
       // --- Summary Data for Battery Alerts ---
       summaryData = [
         {
-          title: "Critical Battery",
-          value: criticalBatteryCount,
-          icon: Battery,
-          color: themeColors.danger,
-          type: "critical-battery",
-        },
-        {
           title: "Battery Off",
           value: batteryOffCount,
           icon: Battery,
           color: themeColors.primary,
           type: "battery-off",
+        },
+        {
+          title: "Critical Battery",
+          value: criticalBatteryCount,
+          icon: Battery,
+          color: themeColors.danger,
+          type: "critical-battery",
         },
         {
           title: "Low Battery",
@@ -1161,22 +1115,43 @@ const AdminDashboard = () => {
             (device) => (device.current_status || "").toLowerCase() === "full"
           ).length
         : 0;
+      // Calculate empty and low counts directly from realtimeStatus for accuracy
+      const emptyDevicesCount = Array.isArray(realtimeStatus)
+        ? realtimeStatus.filter(
+            (device) => (device.current_status || "").toLowerCase() === "empty"
+          ).length
+        : 0;
+      const lowDevicesCount = Array.isArray(realtimeStatus)
+        ? realtimeStatus.filter(
+            (device) => (device.current_status || "").toLowerCase() === "low"
+          ).length
+        : 0;
+      const tamperDevicesCount = Array.isArray(realtimeStatus)
+        ? realtimeStatus.filter(
+            (device) => (device.current_status || "").toLowerCase() === "tamper"
+          ).length
+        : 0;
       summaryData = [
         {
           title: "Empty Devices",
-          value:
-            alertDistributionData.find((d) => d.name === "Empty")?.value || 0,
+          value: emptyDevicesCount,
           icon: AlertOctagon,
           color: themeColors.danger,
           type: "empty",
         },
         {
           title: "Low Level",
-          value:
-            alertDistributionData.find((d) => d.name === "Low")?.value || 0,
+          value: lowDevicesCount,
           icon: AlertTriangle,
           color: themeColors.warning,
           type: "low",
+        },
+        {
+          title: "Tamper Alerts",
+          value: tamperDevicesCount,
+          icon: ShieldAlert,
+          color: themeColors.primary,
+          type: "tamper",
         },
         {
           title: "Full Devices",
@@ -1184,14 +1159,6 @@ const AdminDashboard = () => {
           icon: CheckCircle,
           color: themeColors.success,
           type: "full",
-        },
-        {
-          title: "Tamper Alerts",
-          value:
-            alertDistributionData.find((d) => d.name === "Tamper")?.value || 0,
-          icon: ShieldAlert,
-          color: themeColors.primary,
-          type: "tamper",
         },
       ];
     }
@@ -1268,6 +1235,7 @@ const AdminDashboard = () => {
           onRefresh={handleRefresh}
           isLoading={false} // Never show loading spinner
           onDeviceCardClick={handleDeviceCardClick}
+          isRefreshing={refreshing}
         />
 
         {/* Enhanced Alert Type Selector - toggle button style for Tissue and Battery Alerts */}
@@ -1462,35 +1430,5 @@ const AdminDashboard = () => {
     </React.Fragment>
   );
 };
-
-// --- Local Storage & Caching Logic ---
-// This should be placed at the top level of the file, but for patching, add here and move as needed
-
-// Helper to cache and restore dashboard data
-function useDashboardCache(key, data, setData) {
-  // On mount, try to load from localStorage
-  useEffect(() => {
-    const cached = localStorage.getItem(key);
-    if (cached) {
-      try {
-        setData(JSON.parse(cached));
-      } catch {}
-    }
-    // eslint-disable-next-line
-  }, []);
-
-  // On data change, update cache
-  useEffect(() => {
-    if (data) {
-      localStorage.setItem(key, JSON.stringify(data));
-    }
-  }, [data, key]);
-}
-
-// Usage in AdminDashboard:
-// useDashboardCache("dashboardData", dashboardData, setDashboardData);
-// useDashboardCache("realtimeStatus", realtimeStatus, setRealtimeStatus);
-
-// You must call these hooks in the main AdminDashboard component body, after state is defined.
 
 export default AdminDashboard;

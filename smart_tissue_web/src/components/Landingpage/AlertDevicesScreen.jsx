@@ -2,6 +2,7 @@
 import React, { useMemo, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import DeviceCard from "./DeviceCard";
+import BatteryDeviceCard from "./BatteryDeviceCard";
 import { useTheme } from "../../hooks/useThemeContext";
 import { useDeviceStore } from "../../store/useDeviceStore";
 import DeviceHeader from "./DeviceHeader";
@@ -266,29 +267,32 @@ export default function AlertDevicesScreen() {
         break;
       }
 
-      case "offline":
-      case "Offline": {
-        const isPowerOff = (powerStatus) => {
-          if (powerStatus === null || powerStatus === undefined) return true;
-          const status = String(powerStatus).trim().toLowerCase();
-          return ["off", "no", "none", "", "0", "false"].includes(status);
-        };
-
+      case "offline": {
+        // Show both battery 0, battery_off, and offline devices
         devices = devices.filter((device) => {
+          // Offline status
           const status = (device.current_status || "").toLowerCase();
-          const deviceIsPowerOff = isPowerOff(device.power_status);
-          const isOfflineStatus = [
+          const isOffline = [
             "offline",
             "disconnected",
             "inactive",
             "power off",
             "power_off",
+            "unknown",
           ].includes(status);
-          const hasNoRecentUpdates =
-            device.minutes_since_update === null ||
-            device.minutes_since_update > 30;
 
-          return isOfflineStatus || deviceIsPowerOff || hasNoRecentUpdates;
+          // Battery 0 logic
+          const batteryZero =
+            (typeof device.battery_percentage === "number" &&
+              device.battery_percentage === 0) ||
+            (typeof device.battery_percentage === "string" &&
+              device.battery_percentage.trim() === "0");
+
+          // Battery off logic
+          const batteryOff =
+            device.battery_off === 1 || device.battery_off === true;
+
+          return isOffline || batteryZero || batteryOff;
         });
         break;
       }
@@ -399,14 +403,35 @@ export default function AlertDevicesScreen() {
               // Always ensure device.id and device_id are present and valid
               let id = device.id;
               let deviceId = device.device_id;
-              // If id is missing but device_id is present, use device_id as id
               if (!id && deviceId) id = deviceId;
-              // If device_id is missing but id is present, use id as device_id
               if (!deviceId && id) deviceId = id;
-              // If both are missing, fallback to index (should not happen in real data)
               if (!id && !deviceId) {
                 id = deviceId = `unknown-${idx}`;
               }
+
+              // For offline view, show BatteryDeviceCard for battery 0 or battery_off, DeviceCard for others
+              if (
+                alertType === "offline" &&
+                ((typeof device.battery_percentage === "number" &&
+                  device.battery_percentage === 0) ||
+                  (typeof device.battery_percentage === "string" &&
+                    device.battery_percentage.trim() === "0") ||
+                  device.battery_off === 1 ||
+                  device.battery_off === true)
+              ) {
+                return (
+                  <BatteryDeviceCard
+                    key={String(id)}
+                    device={{
+                      ...device,
+                      id: String(id),
+                      device_id: String(deviceId),
+                    }}
+                    index={idx}
+                  />
+                );
+              }
+              // Otherwise, show DeviceCard
               return (
                 <DeviceCard
                   key={String(id)}

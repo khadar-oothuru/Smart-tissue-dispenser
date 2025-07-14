@@ -97,9 +97,36 @@ const UserItem = ({ user, onRoleChange, onDelete, onViewProfile }) => {
             className="text-xs"
             style={{ color: themeColors.textTertiary || "#8a8a8a" }}
           >
-            Joined{" "}
-            {user.date_joined_formatted ||
-              new Date(user.date_joined).toLocaleDateString()}
+            {(() => {
+              // Prefer formatted if present
+              if (user.date_joined_formatted) {
+                return `Joined ${user.date_joined_formatted}`;
+              }
+              // If not present, try to parse and format
+              if (user.date_joined) {
+                const date = new Date(user.date_joined);
+                // Check for invalid date or epoch (1970)
+                if (
+                  isNaN(date.getTime()) ||
+                  date.getFullYear() === 1970 ||
+                  date.getFullYear() < 2000 // treat pre-2000 as invalid for your app
+                ) {
+                  return "Joined N/A";
+                }
+                return (
+                  "Joined " +
+                  date.toLocaleString("en-US", {
+                    year: "numeric",
+                    month: "long",
+                    day: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: true,
+                  })
+                );
+              }
+              return "Joined N/A";
+            })()}
           </p>
         </div>
 

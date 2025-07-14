@@ -640,22 +640,36 @@ const UserManagement = () => {
 
       {/* Users Display: Only User Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {filteredUsers.map((user) => (
-          <UserItem
-            key={user.id}
-            user={{
-              ...user,
-              username: user.username,
-              full_name: user.username,
-              date_joined_formatted: new Date(
-                user.last_login
-              ).toLocaleDateString(),
-            }}
-            onRoleChange={() => handleRoleChange(user)}
-            onDelete={() => handleDeleteUser(user.id)}
-            onViewProfile={() => handleViewProfile(user)}
-          />
-        ))}
+        {filteredUsers.map((user) => {
+          let date_joined_formatted = undefined;
+          if (user.date_joined) {
+            const date = new Date(user.date_joined);
+            if (!isNaN(date.getTime()) && date.getFullYear() > 1970) {
+              date_joined_formatted = date.toLocaleString("en-US", {
+                year: "numeric",
+                month: "long",
+                day: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true,
+              });
+            }
+          }
+          return (
+            <UserItem
+              key={user.id}
+              user={{
+                ...user,
+                username: user.username,
+                full_name: user.username,
+                date_joined_formatted,
+              }}
+              onRoleChange={() => handleRoleChange(user)}
+              onDelete={() => handleDeleteUser(user.id)}
+              onViewProfile={() => handleViewProfile(user)}
+            />
+          );
+        })}
       </div>
 
       {filteredUsers.length === 0 && (

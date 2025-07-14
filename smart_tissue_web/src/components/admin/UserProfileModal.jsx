@@ -174,11 +174,11 @@ const UserProfileModal = ({ visible, user, onClose }) => {
               value={formatDate(user.date_joined)}
             />
 
-            <InfoItem
+            {/* <InfoItem
               icon={Clock}
               label="Last Login"
               value={formatDate(user.last_login) || "Never"}
-            />
+            /> */}
 
             <InfoItem
               icon={CheckCircle}

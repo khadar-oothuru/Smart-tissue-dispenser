@@ -213,7 +213,8 @@ export default function BatteryAlertsScreen() {
           return (
             batteryPercentage !== null &&
             batteryPercentage >= 1 &&
-            batteryPercentage <= 10
+            batteryPercentage <= 10 &&
+            batteryPercentage <= 20
           );
         });
         break;
@@ -221,16 +222,17 @@ export default function BatteryAlertsScreen() {
         devices = sortedDevices.filter((device) => {
           const batteryPercentage = device.battery_percentage;
           return (
-            device.battery_off === 1 ||
-            device.battery_off_count > 0 ||
-            batteryPercentage === 0
+            (device.battery_off === 1 ||
+              device.battery_off_count > 0 ||
+              batteryPercentage === 0) &&
+            batteryPercentage <= 20
           );
         });
         break;
       case "low-battery":
         devices = sortedDevices.filter((device) => {
           const batteryPercentage = device.battery_percentage;
-          // Only include if battery is >10 and <=20
+          // Only include if battery is >10 and <=20, and not >20
           return (
             batteryPercentage !== null &&
             batteryPercentage > 10 &&
@@ -245,32 +247,29 @@ export default function BatteryAlertsScreen() {
         });
         break;
       case "all-battery":
+        // Only show devices that are critical, low, or battery off (exclude good battery and any others), and battery_percentage <= 20
         devices = sortedDevices.filter((device) => {
           const batteryPercentage = device.battery_percentage;
-          // critical
-          if (
-            (device.battery_critical === 1 ||
-              device.battery_critical_count > 0 ||
-              (batteryPercentage !== null &&
-                batteryPercentage > 0 &&
-                batteryPercentage <= 10)) &&
-            !(
-              device.battery_off === 1 ||
-              device.battery_off_count > 0 ||
-              batteryPercentage === 0
-            )
-          )
-            return true;
-          // battery off
+          if (batteryPercentage === null || batteryPercentage > 20)
+            return false;
+          // Battery Off: 0%
           if (
             device.battery_off === 1 ||
             device.battery_off_count > 0 ||
             batteryPercentage === 0
-          )
+          ) {
             return true;
-          // low
+          }
+          // Critical Battery: 1-10%
           if (
-            batteryPercentage !== null &&
+            device.battery_critical === 1 ||
+            device.battery_critical_count > 0 ||
+            (batteryPercentage >= 1 && batteryPercentage <= 10)
+          ) {
+            return true;
+          }
+          // Low Battery: 11-20%
+          if (
             batteryPercentage > 10 &&
             batteryPercentage <= 20 &&
             !(
@@ -283,10 +282,10 @@ export default function BatteryAlertsScreen() {
               device.battery_off_count > 0 ||
               batteryPercentage === 0
             )
-          )
+          ) {
             return true;
-          // good
-          if (batteryPercentage !== null && batteryPercentage > 20) return true;
+          }
+          // Exclude all other devices (including good battery)
           return false;
         });
         break;

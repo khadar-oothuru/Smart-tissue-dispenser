@@ -186,6 +186,7 @@ const LandingPageTop = ({
   realtimeStatus = [],
   onRefresh,
   isLoading = false,
+  isRefreshing = false,
   onDeviceCardClick,
 }) => {
   // const navigate = useNavigate();
@@ -332,12 +333,14 @@ const LandingPageTop = ({
             </div>
             <button
               onClick={onRefresh}
-              disabled={isLoading}
+              disabled={isLoading || isRefreshing}
               className="p-3 bg-white/20 hover:bg-white/30 rounded-xl transition-all duration-200 disabled:opacity-50 backdrop-blur-sm border border-white/20"
             >
               <RefreshCw
                 size={20}
-                className={`text-white ${isLoading ? "animate-spin" : ""}`}
+                className={`text-white ${
+                  isLoading || isRefreshing ? "animate-spin" : ""
+                }`}
               />
             </button>
           </div>
