@@ -224,8 +224,17 @@ const LandingPageTop = ({
       (Array.isArray(realtimeStatus) ? realtimeStatus.length : 0);
     const activeDevices = stats?.activeDevices || 0;
 
-    // Calculate offline devices: total - active
-    const offlineDevices = totalDevices - activeDevices;
+    // Calculate offline devices: those with status 'inactive', 'offline', 'disconnected', or 'unknown' (case-insensitive)
+    const offlineDevices = Array.isArray(realtimeStatus)
+      ? realtimeStatus.filter((d) => {
+          const statusRaw = d.current_status || d.status;
+          if (!statusRaw || typeof statusRaw !== "string") return false;
+          const status = statusRaw.trim().toLowerCase();
+          return ["inactive", "offline", "disconnected", "unknown"].includes(
+            status
+          );
+        }).length
+      : 0;
 
     // Get battery and power alert counts using the utility function
     const {

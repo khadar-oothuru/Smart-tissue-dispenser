@@ -77,7 +77,6 @@ const AdminDashboard = () => {
       navigate(`/admin/battery-alerts/${deviceType}`);
       return;
     }
-    // For offline card, show both offline and battery-off devices
     if (deviceType === "poweroff" || deviceType === "power-off") {
       navigate("/admin/power-off-devices");
       return;
@@ -86,10 +85,8 @@ const AdminDashboard = () => {
     if (deviceType === "active") {
       alertType = "active";
     } else if (deviceType === "offline") {
-      // For offline card, show both offline and battery-off devices (mobile logic)
-      alertType = "offline-or-battery-off";
-    } else if (deviceType === "offline-or-battery-off") {
-      alertType = "offline-or-battery-off";
+      // Only show true offline devices (not battery off, not power off)
+      alertType = "offline";
     } else if (deviceType === "empty") {
       alertType = "empty";
     } else if (deviceType === "low") {
@@ -203,10 +200,43 @@ const AdminDashboard = () => {
 
     // --- Mobile app logic for active/offline/no-power ---
     // Helper functions
-    const isPowerOff = (powerStatus) => {
-      if (powerStatus === null || powerStatus === undefined) return false;
-      const status = String(powerStatus).trim().toLowerCase();
-      return ["off", "none", "", "0", "false"].includes(status);
+    // Unified isPowerOff: can take a device object or a raw value
+    const isPowerOff = (input) => {
+      // If input is an object, check all relevant fields
+      if (typeof input === "object" && input !== null) {
+        const powerFields = [
+          input.power_status,
+          input.pwrstatus,
+          input.status,
+          input.current_status,
+        ];
+        return powerFields.some((val) => {
+          if (!val || typeof val !== "string") return false;
+          const s = val.toLowerCase().trim();
+          return [
+            "power off",
+            "power_off",
+            "off",
+            "none",
+            "0",
+            "false",
+            "no",
+          ].includes(s);
+        });
+      }
+      // Otherwise treat as a raw value
+      if (input === null || input === undefined) return false;
+      const status = String(input).trim().toLowerCase();
+      return [
+        "off",
+        "none",
+        "",
+        "0",
+        "false",
+        "power off",
+        "power_off",
+        "no",
+      ].includes(status);
     };
     const isNoPower = (powerStatus) => {
       if (powerStatus === null || powerStatus === undefined) return false;
@@ -214,22 +244,21 @@ const AdminDashboard = () => {
       return status === "no";
     };
 
-    // Merge logic for active/offline/no-power
+    // Consider devices with status 'inactive', 'offline', 'disconnected', or 'unknown' as offline (case-insensitive)
     const offlineDevicesArr = mergedDevices.filter((d) => {
-      const status = (d.current_status || d.status || "").toLowerCase();
-      const pwr = (d.pwrstatus || d.power_status || "").toLowerCase();
-      return (
-        ["offline", "disconnected", "inactive", "unknown"].includes(status) ||
-        isPowerOff(pwr)
+      const statusRaw = d.current_status || d.status;
+      if (!statusRaw || typeof statusRaw !== "string") return false;
+      const status = statusRaw.toLowerCase().trim();
+      return ["inactive", "offline", "disconnected", "unknown"].includes(
+        status
       );
     });
     const activeDevicesArr = mergedDevices.filter((d) => {
       const status = (d.current_status || d.status || "").toLowerCase();
-      const pwr = (d.pwrstatus || d.power_status || "").toLowerCase();
       return (
         !["offline", "disconnected", "inactive", "unknown"].includes(status) &&
-        !isPowerOff(pwr) &&
-        !isNoPower(pwr)
+        !isPowerOff(d) &&
+        !isNoPower(d.pwrstatus || d.power_status)
       );
     });
     const noPowerDevicesArr = mergedDevices.filter((d) => {
@@ -475,14 +504,14 @@ const AdminDashboard = () => {
     }
   }, [accessToken, refreshAllData]);
 
-  // Unified auto-refresh: refresh all dashboard and alert data every 1 minute
+  // Unified auto-refresh: refresh all dashboard and alert data every 30 seconds
   useEffect(() => {
     if (!accessToken || isFirstLoad) return;
     // Call refresh immediately on mount
     handleRefresh();
     const interval = setInterval(() => {
       handleRefresh();
-    }, 60000); // 60 seconds
+    }, 30000); // 30 seconds
     return () => clearInterval(interval);
   }, [accessToken, isFirstLoad, handleRefresh]);
 
@@ -772,41 +801,26 @@ const AdminDashboard = () => {
     );
   };
 
-  // Calculate alert counts for summary cards and modals
+  // Calculate alert counts for summary cards and modals (always use latest realtimeStatus)
   const alertCounts = useMemo(() => {
-    // Get tissue alert counts
-    const tissueAlerts = getTissueAlertCounts(realtimeStatus);
-
-    // Get battery and power alert counts
-    const batteryAlerts = getBatteryAndPowerAlertCounts(realtimeStatus);
-
-    // Calculate good battery count (devices with battery > 20%)
-    const goodBatteryCount = Array.isArray(realtimeStatus)
-      ? realtimeStatus.filter((device) => {
-          const batteryPercentage =
-            typeof device.battery_percentage === "number"
-              ? device.battery_percentage
-              : null;
-          return batteryPercentage !== null && batteryPercentage > 20;
-        }).length
-      : 0;
-
+    const status = Array.isArray(realtimeStatus) ? realtimeStatus : [];
+    const tissueAlerts = getTissueAlertCounts(status);
+    const batteryAlerts = getBatteryAndPowerAlertCounts(status);
+    const goodBatteryCount = status.filter((device) => {
+      const batteryPercentage =
+        typeof device.battery_percentage === "number"
+          ? device.battery_percentage
+          : null;
+      return (
+        !device.battery_off &&
+        batteryPercentage !== null &&
+        batteryPercentage > 20
+      );
+    }).length;
     return {
-      // Tissue alerts
-      emptyCount: tissueAlerts.emptyCount,
-      lowCount: tissueAlerts.lowCount,
-      fullCount: tissueAlerts.fullCount,
-      tamperCount: tissueAlerts.tamperCount,
-      totalTissueAlerts: tissueAlerts.totalTissueAlerts,
-
-      // Battery alerts
-      lowBatteryCount: batteryAlerts.lowBatteryCount,
-      criticalBatteryCount: batteryAlerts.criticalBatteryCount,
-      batteryOffCount: batteryAlerts.batteryOffCount,
-      noPowerCount: batteryAlerts.noPowerCount,
-      powerOffCount: batteryAlerts.powerOffCount,
+      ...tissueAlerts,
+      ...batteryAlerts,
       goodBatteryCount,
-      powerTotalAlertsCount: batteryAlerts.powerTotalAlertsCount,
     };
   }, [realtimeStatus]);
 

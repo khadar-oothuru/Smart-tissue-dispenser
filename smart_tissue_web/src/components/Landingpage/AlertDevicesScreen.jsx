@@ -42,10 +42,7 @@ const ALERT_TYPE_MAP = {
     title: "Offline Devices",
     noData: "No offline devices found.",
   },
-  "offline-or-battery-off": {
-    title: "Offline or Battery Off Devices",
-    noData: "No offline or battery off devices found.",
-  },
+  // ...removed offline-or-battery-off combination logic...
   full: {
     title: "Full Devices",
     noData: "No full devices found.",
@@ -236,43 +233,13 @@ export default function AlertDevicesScreen() {
         });
         break;
 
-      case "offline-or-battery-off": {
-        // Strictly show ONLY devices that match one of the three conditions (no others)
-        devices = devices.filter((device) => {
-          // Check all possible status fields
-          const status = (
-            device.current_status ||
-            device.status ||
-            ""
-          ).toLowerCase();
-          const isOfflineStatus = [
-            "offline",
-            "disconnected",
-            "inactive",
-            "unknown",
-          ].includes(status);
-
-          // Battery off logic (robust)
-          const batteryOff =
-            device.battery_off === 1 || device.battery_off === true;
-          const batteryPercentageZero =
-            (typeof device.battery_percentage === "number" &&
-              device.battery_percentage === 0) ||
-            (typeof device.battery_percentage === "string" &&
-              device.battery_percentage.trim() === "0");
-
-          // Only include if matches one of the three
-          return isOfflineStatus || batteryOff || batteryPercentageZero;
-        });
-        break;
-      }
+      // ...removed offline-or-battery-off combination logic...
 
       case "offline": {
-        // Show both battery 0, battery_off, and offline devices
+        // Only show devices with offline status (not battery off or battery 0)
         devices = devices.filter((device) => {
-          // Offline status
           const status = (device.current_status || "").toLowerCase();
-          const isOffline = [
+          return [
             "offline",
             "disconnected",
             "inactive",
@@ -280,19 +247,6 @@ export default function AlertDevicesScreen() {
             "power_off",
             "unknown",
           ].includes(status);
-
-          // Battery 0 logic
-          const batteryZero =
-            (typeof device.battery_percentage === "number" &&
-              device.battery_percentage === 0) ||
-            (typeof device.battery_percentage === "string" &&
-              device.battery_percentage.trim() === "0");
-
-          // Battery off logic
-          const batteryOff =
-            device.battery_off === 1 || device.battery_off === true;
-
-          return isOffline || batteryZero || batteryOff;
         });
         break;
       }
@@ -409,29 +363,7 @@ export default function AlertDevicesScreen() {
                 id = deviceId = `unknown-${idx}`;
               }
 
-              // For offline view, show BatteryDeviceCard for battery 0 or battery_off, DeviceCard for others
-              if (
-                alertType === "offline" &&
-                ((typeof device.battery_percentage === "number" &&
-                  device.battery_percentage === 0) ||
-                  (typeof device.battery_percentage === "string" &&
-                    device.battery_percentage.trim() === "0") ||
-                  device.battery_off === 1 ||
-                  device.battery_off === true)
-              ) {
-                return (
-                  <BatteryDeviceCard
-                    key={String(id)}
-                    device={{
-                      ...device,
-                      id: String(id),
-                      device_id: String(deviceId),
-                    }}
-                    index={idx}
-                  />
-                );
-              }
-              // Otherwise, show DeviceCard
+              // For offline view, always show DeviceCard (never BatteryDeviceCard)
               return (
                 <DeviceCard
                   key={String(id)}
