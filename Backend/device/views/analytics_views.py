@@ -915,6 +915,9 @@ def generate_reportlab_pdf(analytics_data, filename, period):
         full_alerts = 0
         
         for device in analytics_data.get('data', []):
+            # TODO: Add logic to process each device
+            pass
+
     from reportlab.lib.pagesizes import A4
     from reportlab.lib import colors
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -1143,12 +1146,8 @@ def generate_reportlab_pdf(analytics_data, filename, period):
     response.write(pdf_content)
 
     return response
-        buffer = io.BytesIO()
-        plt.savefig(buffer, format='png', bbox_inches='tight', dpi=300)
-        buffer.seek(0)
-        # Create ReportLab Image
-        charts.append(Image(buffer, width=300, height=200))
-        plt.close(fig)
+    # The following code appears to be misplaced and should be inside a function or block, not after a return statement.
+    # If needed, move this logic to the appropriate place in your code.
     
     # Battery Alert Breakdown Pie Chart
     if battery_critical + battery_low + battery_off > 0:

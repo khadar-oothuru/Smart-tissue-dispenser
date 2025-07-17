@@ -510,29 +510,38 @@ const Home = () => {
 
     // Power off/offline logic
     const isPowerOff = (powerStatus) => {
-      if (powerStatus === null || powerStatus === undefined) return false;
+      if (powerStatus === null || powerStatus === undefined) return true;
       const status = String(powerStatus).trim().toLowerCase();
       return ["off", "no", "none", "", "0", "false"].includes(status);
     };
+    // No Power logic
+    const isNoPower = (powerStatus) => {
+      if (powerStatus === null || powerStatus === undefined) return false;
+      const status = String(powerStatus).trim().toLowerCase();
+      return ["no", "none", "0", "false"].includes(status);
+    };
 
-    // Offline: current_status offline/disconnected/inactive/unknown or power_status/pwrstatus off/no/none/0/false
+    // Calculate "No Power" devices separately
+    const noPowerDevicesArr = mergedDevices.filter((d) =>
+      isNoPower(d.power_status)
+    );
+
+    // Offline: current_status offline/disconnected/inactive/unknown or power_status/pwrstatus off/no/none/0/false, but exclude "No Power" devices
     const offlineDevicesArr = mergedDevices.filter((d) => {
       const status = (d.current_status || "").toLowerCase();
       const pwr = (d.pwrstatus || d.power_status || "").toLowerCase();
+      if (isNoPower(pwr)) return false;
       return (
         ["offline", "disconnected", "inactive", "unknown"].includes(status) ||
         isPowerOff(pwr)
       );
     });
 
-    // Active: not in offline
+    // Active: not in offline and not "no power"
     const activeDevicesArr = mergedDevices.filter((d) => {
-      const status = (d.current_status || "").toLowerCase();
       const pwr = (d.pwrstatus || d.power_status || "").toLowerCase();
-      return (
-        !["offline", "disconnected", "inactive", "unknown"].includes(status) &&
-        !isPowerOff(pwr)
-      );
+      if (isNoPower(pwr)) return false;
+      return !offlineDevicesArr.includes(d);
     });
 
     return {
@@ -540,6 +549,8 @@ const Home = () => {
       activeDevices: activeDevicesArr.length,
       offlineDevices: offlineDevicesArr.length,
       offlineDevicesList: offlineDevicesArr,
+      noPowerDevices: noPowerDevicesArr.length,
+      noPowerDevicesList: noPowerDevicesArr,
       criticalDevices:
         mergedDevices.filter(
           (d) => d.current_status?.toLowerCase() === "tamper"
@@ -871,6 +882,7 @@ const SolarPlanetDeviceSummary = ({ stats }) => {
   const orbitAnim1 = useRef(new Animated.Value(0)).current;
   const orbitAnim2 = useRef(new Animated.Value(0)).current;
   const orbitAnim3 = useRef(new Animated.Value(0)).current;
+  const orbitAnim4 = useRef(new Animated.Value(0)).current; // For No Power
   const floatAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     // Initial entrance animations
@@ -919,12 +931,21 @@ const SolarPlanetDeviceSummary = ({ stats }) => {
     createOrbitAnimation(orbitAnim1, 8000).start();
     createOrbitAnimation(orbitAnim2, 12000).start();
     createOrbitAnimation(orbitAnim3, 16000).start();
+    createOrbitAnimation(orbitAnim4, 10000).start();
     floatAnimation.start();
 
     return () => {
       floatAnimation.stop();
     };
-  }, [scaleAnim, fadeAnim, floatAnim, orbitAnim1, orbitAnim2, orbitAnim3]);
+  }, [
+    scaleAnim,
+    fadeAnim,
+    floatAnim,
+    orbitAnim1,
+    orbitAnim2,
+    orbitAnim3,
+    orbitAnim4,
+  ]);
 
   const getRotation = (animValue) =>
     animValue.interpolate({
@@ -955,6 +976,28 @@ const SolarPlanetDeviceSummary = ({ stats }) => {
     >
       {/* Solar System Container - use flex to center everything */}
       <View style={styles.solarSystemFixed}>
+        {/* --- NO POWER SATELLITE: top-left --- */}
+        <View
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            zIndex: 10,
+            paddingLeft: 8,
+            pointerEvents: "box-none",
+          }}
+          pointerEvents="box-none"
+        >
+          <FloatingSatellite
+            icon="power-plug-off-outline"
+            value={stats.noPowerDevices || 0}
+            label="No Power"
+            color="#FF3B30"
+            position="topLeft"
+            delay={300}
+            onPress={() => navigation.navigate("PowerOffDevicesScreen")}
+          />
+        </View>
         {/* --- SATELLITES: Offline at top-right, Active at bottom-left --- */}
         {/* Offline Satellite at top-right */}
         <View
@@ -1007,6 +1050,14 @@ const SolarPlanetDeviceSummary = ({ stats }) => {
           />
         </View>
         {/* Orbit Rings */}
+        <Animated.View
+          style={[
+            styles.orbitRing4,
+            { transform: [{ rotate: getRotation(orbitAnim4) }] },
+          ]}
+        >
+          <View style={styles.orbitDot4} />
+        </Animated.View>
         <Animated.View
           style={[
             styles.orbitRing3,
@@ -1592,6 +1643,16 @@ const getSolarPlanetStyles = (colors, isDark) =>
       display: "flex",
     },
     // Orbit rings
+    orbitRing4: {
+      position: "absolute",
+      width: 170,
+      height: 170,
+      borderRadius: 85,
+      borderWidth: 1.5,
+      borderColor: "#FF3B3040",
+      borderStyle: "dashed",
+      alignSelf: "center",
+    },
     orbitRing1: {
       position: "absolute",
       width: 140,
@@ -1623,6 +1684,16 @@ const getSolarPlanetStyles = (colors, isDark) =>
       alignSelf: "center",
     },
     // Orbit dots
+    orbitDot4: {
+      position: "absolute",
+      top: -6,
+      left: "50%",
+      marginLeft: -6,
+      width: 12,
+      height: 12,
+      borderRadius: 6,
+      backgroundColor: "#FF3B30",
+    },
     orbitDot1: {
       position: "absolute",
       top: -4,

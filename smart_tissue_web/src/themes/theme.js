@@ -25,7 +25,9 @@ const COLORS = {
     background: "#0B0E0F",
     surface: "#1A1D1E",
     logo: "#00FF85",
-    primary: "#3B82F6",
+    // primary: "#3B82F6",
+    primary: "#0096FF", // vivid purple
+
     heading: "#F8F9FA",
     text: "#E9ECEF",
     tab: "#2C2F30",
