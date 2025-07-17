@@ -22,8 +22,9 @@ const COLORS = {
     background: "#0B0E0F",
     surface: "#1A1D1E",
     logo: "#00FF85",
+    primary: "#0096FF",
 
-    primary: "#F4631E",
+    //primary: "#F4631E",
     heading: "#F8F9FA",
     text: "#E9ECEF",
     tab: "#2C2F30",
