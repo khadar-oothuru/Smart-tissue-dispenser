@@ -1,0 +1,26 @@
+version: '3.8'
+services:
+  backend:
+    build: ./Backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./Backend:/app
+    environment:
+      - DJANGO_SETTINGS_MODULE=backend.settings
+  smart_tissue_web:
+    build: ./smart_tissue_web
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./smart_tissue_web:/app
+    env_file:
+      - ./smart_tissue_web/.env
+  smart_tissue_dispenser:
+    build: ./Smart_Tissue_Dispenser
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./Smart_Tissue_Dispenser:/app
+    environment:
+      - EXPO_WEB_ONLY=true

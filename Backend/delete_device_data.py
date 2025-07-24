@@ -17,7 +17,7 @@ def delete_all_device_data():
     device_data_count = DeviceData.objects.count()
     notification_count = Notification.objects.count()
     
-    print(f"📊 Current database state:")
+    print("📊 Current database state:")
     print(f"   - DeviceData records: {device_data_count}")
     print(f"   - Notification records: {notification_count}")
     
@@ -26,7 +26,7 @@ def delete_all_device_data():
         return
     
     # Ask for confirmation
-    print(f"\n⚠️  WARNING: This will permanently delete:")
+    print("\n⚠️  WARNING: This will permanently delete:")
     print(f"   - {device_data_count} DeviceData records")
     print(f"   - {notification_count} Notification records")
     
@@ -36,7 +36,7 @@ def delete_all_device_data():
         print("❌ Operation cancelled.")
         return
     
-    print(f"\n🔄 Deleting data...")
+    print("\n🔄 Deleting data...")
     
     # Delete notifications first (they may reference device data)
     if notification_count > 0:
@@ -52,8 +52,8 @@ def delete_all_device_data():
     remaining_data = DeviceData.objects.count()
     remaining_notifications = Notification.objects.count()
     
-    print(f"\n🎉 Cleanup completed!")
-    print(f"📊 Final database state:")
+    print("\n🎉 Cleanup completed!")
+    print("📊 Final database state:")
     print(f"   - DeviceData records: {remaining_data}")
     print(f"   - Notification records: {remaining_notifications}")
     
@@ -148,13 +148,13 @@ def show_data_summary():
         print(f"   📅 Date range: {oldest_record.timestamp.date()} to {latest_record.timestamp.date()}")
         
         # Alert distribution
-        print(f"\n🚨 Alert Distribution:")
+        print("\n🚨 Alert Distribution:")
         for alert in ['FULL', 'LOW', 'EMPTY']:
             count = DeviceData.objects.filter(alert=alert).count()
             print(f"   - {alert}: {count} records")
         
         # Device distribution
-        print(f"\n🏠 Data by Device:")
+        print("\n🏠 Data by Device:")
         devices = Device.objects.all()
         for device in devices:
             count = DeviceData.objects.filter(device=device).count()
@@ -167,7 +167,7 @@ def show_data_summary():
     
     if notification_count > 0:
         # Notification types
-        print(f"📝 Notification Types:")
+        print("📝 Notification Types:")
         notification_types = Notification.objects.values_list('notification_type', flat=True).distinct()
         for ntype in notification_types:
             count = Notification.objects.filter(notification_type=ntype).count()

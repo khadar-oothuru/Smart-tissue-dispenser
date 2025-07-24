@@ -14,7 +14,7 @@ from django.conf import settings
 import cloudinary
 import cloudinary.uploader
 
-# Correct imports
+
 from ..models import CustomUser, AppLog
 from ..serializers import (
     RegisterSerializer, 
@@ -27,7 +27,7 @@ from ..serializers import (
 
 User = get_user_model()
 
-# Configure Cloudinary
+
 cloudinary.config(
     cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
     api_key=os.getenv('CLOUDINARY_API_KEY'),
@@ -151,11 +151,10 @@ class UploadProfilePictureView(APIView):
                 request.user.profile_picture = result['secure_url']
                 request.user.save()
                 
-                # Generate new tokens with updated user data
                 from rest_framework_simplejwt.tokens import RefreshToken
                 refresh = RefreshToken.for_user(request.user)
                 
-                # Log successful profile picture upload
+                
                 AppLog.log_success(
                     message="Profile picture uploaded successfully",
                     source="UploadProfilePictureView",
@@ -173,7 +172,7 @@ class UploadProfilePictureView(APIView):
                     }
                 })
             except Exception as e:
-                # Log failed profile picture upload
+                
                 AppLog.log_error(
                     message="Profile picture upload failed",
                     source="UploadProfilePictureView",
